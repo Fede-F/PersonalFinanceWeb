@@ -39,3 +39,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local databases
+/postgres-data/
+*.sqlite
+*.db
+
+# artifacts
+/artifacts/
+/documentation/screenshots/

@@ -1,0 +1,23 @@
+# FinanceWebApp Project Rules
+
+En cada nueva sesión o tarea, tú como asistente DEBES seguir estas reglas:
+
+## 1. Conciencia de Contexto (OBLIGATORIO)
+- **Siempre leer** `PROJECT_CONTEXT.md` antes de proponer cambios estructurales.
+- **Siempre leer** `CODING_STANDARDS.md` para asegurar que el código nuevo use la misma "voz" y patrones (Server Actions, Zod, Shadcn).
+- **Consultar** `documentation/dashboard_evolution_plan.md` para entender en qué fase estamos y no adelantarte a funcionalidades futuras sin permiso.
+
+## 2. Estándares Técnicos
+- Mantener el patrón **Mobile-First** (PWA).
+- Usar **Server Components** por defecto para fetching.
+- Las mutaciones de datos SOLO mediante **Server Actions**.
+- **Moneda:** Al tratar con montos, siempre verificar la normalización bimonetaria (Base vs USD).
+
+## 3. Calidad de Código
+- No usar `any` a menos que sea estrictamente necesario por un error de tipado del framework.
+- Mantener los componentes en `src/components/` y las acciones en `src/app/actions/`.
+- Usar siempre **Lucide React** para iconos y **Sonnner** para feedback (Toasts).
+
+## 4. Estilo de Comunicación
+- Sé conciso y objetivo.
+- Antes de cambios grandes, plantea la idea (como hicimos con el Plan de Evolución).
