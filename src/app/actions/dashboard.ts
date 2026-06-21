@@ -4,10 +4,14 @@ import { auth } from "@/auth"
 import { db } from "@/db"
 import { transactions, financialAccounts, categories, supportedCurrencies } from "@/db/schema"
 import { eq, desc, sql, gte, lte, and } from "drizzle-orm"
+import { checkAndUpdateRates } from "@/lib/exchange-rates"
 
 export async function getDashboardData(workspaceId: string, month?: number, year?: number) {
     const session = await auth()
     if (!session?.user?.id) throw new Error("No autorizado")
+
+    // Check and trigger background rates updates if expired
+    checkAndUpdateRates()
 
     // 1. Auto-extension of fixed transactions
     try {

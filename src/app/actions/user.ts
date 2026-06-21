@@ -22,3 +22,20 @@ export async function updateDefaultCurrency(currency: string) {
         return { success: false, error: "Error al actualizar la moneda" }
     }
 }
+
+export async function updateUserTheme(theme: string) {
+    try {
+        const session = await auth()
+        if (!session?.user?.id) return { success: false, error: "No autorizado" }
+
+        await db.update(users)
+            .set({ theme, updatedAt: new Date() })
+            .where(eq(users.id, session.user.id))
+
+        revalidatePath("/")
+        return { success: true }
+    } catch (error) {
+        console.error(error)
+        return { success: false, error: "Error al actualizar el tema" }
+    }
+}

@@ -29,6 +29,8 @@ import { UserNav } from "@/components/user-nav"
 import { PeriodSelector } from "@/components/period-selector"
 import { AnimatedNumber } from "@/components/animated-number"
 import { cn } from "@/lib/utils"
+import { ThemeToggle } from "@/components/theme-toggle"
+import { ThemeSync } from "@/components/theme-sync"
 
 export default async function DashboardPage(props: {
     searchParams: Promise<{ workspaceId?: string; month?: string; year?: string }>
@@ -88,6 +90,9 @@ export default async function DashboardPage(props: {
 
     return (
         <div className="flex flex-col min-h-screen bg-zinc-50/50 dark:bg-zinc-950">
+            {/* Theme synchronizer */}
+            <ThemeSync savedTheme={userData.theme} />
+
             {/* Header */}
             <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-white/80 backdrop-blur-md px-6 dark:bg-zinc-900/80">
                 <div className="flex items-center gap-3">
@@ -104,6 +109,7 @@ export default async function DashboardPage(props: {
                 </div>
 
                 <div className="ml-auto flex items-center gap-4">
+                    <ThemeToggle />
                     <UserNav user={userData} currencies={currencies} />
                 </div>
             </header>

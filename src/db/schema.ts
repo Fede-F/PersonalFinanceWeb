@@ -12,6 +12,7 @@ export const users = pgTable("users", {
     image: text("image"),
     password: text("password"),
     defaultCurrency: varchar("default_currency", { length: 3 }).notNull().default("USD").references(() => supportedCurrencies.code),
+    theme: varchar("theme", { length: 20 }).notNull().default("system"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
