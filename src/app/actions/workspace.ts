@@ -45,3 +45,60 @@ export async function createWorkspace(formData: FormData) {
     }
 }
 
+export async function updateWorkspace(workspaceId: string, name: string) {
+    try {
+        const session = await auth()
+        if (!session?.user?.id) return { success: false, error: "No autorizado" }
+
+        const trimmedName = name?.trim()
+        if (!trimmedName || trimmedName.length < 1 || trimmedName.length > 50) {
+            return { success: false, error: "El nombre debe tener entre 1 y 50 caracteres" }
+        }
+
+        const [workspace] = await db
+            .select()
+            .from(workspaces)
+            .where(eq(workspaces.id, workspaceId))
+
+        if (!workspace) return { success: false, error: "Workspace no encontrado" }
+        if (workspace.ownerId !== session.user.id) {
+            return { success: false, error: "Solo el dueño puede modificar este espacio" }
+        }
+
+        await db.update(workspaces)
+            .set({ name: trimmedName, updatedAt: new Date() })
+            .where(eq(workspaces.id, workspaceId))
+
+        revalidatePath("/dashboard")
+        return { success: true }
+    } catch (error) {
+        console.error("Error updating workspace:", error)
+        return { success: false, error: "Error al renombrar el espacio de trabajo" }
+    }
+}
+
+export async function deleteWorkspace(workspaceId: string) {
+    try {
+        const session = await auth()
+        if (!session?.user?.id) return { success: false, error: "No autorizado" }
+
+        const [workspace] = await db
+            .select()
+            .from(workspaces)
+            .where(eq(workspaces.id, workspaceId))
+
+        if (!workspace) return { success: false, error: "Workspace no encontrado" }
+        if (workspace.ownerId !== session.user.id) {
+            return { success: false, error: "Solo el dueño puede eliminar este espacio" }
+        }
+
+        await db.delete(workspaces).where(eq(workspaces.id, workspaceId))
+
+        revalidatePath("/dashboard")
+        return { success: true }
+    } catch (error) {
+        console.error("Error deleting workspace:", error)
+        return { success: false, error: "Error al eliminar el espacio de trabajo" }
+    }
+}
+

@@ -50,8 +50,9 @@ export function ConceptSelector({ quickConcepts, defaultValue, onChange }: Conce
     const handleChipClick = (concept: string) => {
         if (tsInstance) {
             tsInstance.addOption({ value: concept, text: concept })
-            tsInstance.addItem(concept, true)
+            tsInstance.addItem(concept, false)
             setValue(concept)
+            onChange?.(concept)
         }
     }
 

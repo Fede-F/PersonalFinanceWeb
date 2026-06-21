@@ -1,24 +1,15 @@
 import { auth } from "@/auth"
 import { db } from "@/db"
-import { workspaces, workspaceMembers, supportedCurrencies, users, transactions } from "@/db/schema"
+import { workspaces, workspaceMembers, supportedCurrencies, users } from "@/db/schema"
 import { eq } from "drizzle-orm"
 import { Card, CardHeader, CardContent, CardDescription } from "@/components/ui/card"
 import { getDashboardData } from "@/app/actions/dashboard"
 import { redirect } from "next/navigation"
 import {
-    ArrowUpRight,
-    ArrowDownLeft,
-    Plus,
-    ArrowRightLeft,
-    Calendar as CalendarIcon,
     LayoutDashboard,
-    Wallet,
     TrendingUp,
-    TrendingDown,
-    MapPin
+    TrendingDown
 } from "lucide-react"
-import { format } from "date-fns"
-import { es } from "date-fns/locale"
 import { TransactionModal } from "@/components/transaction-modal"
 import { CreateWorkspaceForm } from "@/components/create-workspace-form"
 import { ActivityList } from "@/components/activity-list"
@@ -28,7 +19,6 @@ import { WorkspaceSwitcher } from "@/components/workspace-switcher"
 import { UserNav } from "@/components/user-nav"
 import { PeriodSelector } from "@/components/period-selector"
 import { AnimatedNumber } from "@/components/animated-number"
-import { cn } from "@/lib/utils"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { ThemeSync } from "@/components/theme-sync"
 
@@ -38,7 +28,7 @@ export default async function DashboardPage(props: {
     const searchParams = await props.searchParams
     const month = searchParams.month ? parseInt(searchParams.month) : undefined
     const year = searchParams.year ? parseInt(searchParams.year) : undefined
-    
+
     const session = await auth()
     if (!session?.user?.id) redirect("/")
 
@@ -50,6 +40,7 @@ export default async function DashboardPage(props: {
             id: workspaces.id,
             name: workspaces.name,
             baseCurrency: workspaces.baseCurrency,
+            ownerId: workspaces.ownerId,
         })
         .from(workspaces)
         .innerJoin(workspaceMembers, eq(workspaces.id, workspaceMembers.workspaceId))
@@ -101,6 +92,7 @@ export default async function DashboardPage(props: {
                         workspaces={userMemberships}
                         currentWorkspaceId={currentWorkspace.id}
                         currencies={currencies}
+                        userId={session.user.id}
                     />
                 </div>
 
@@ -110,7 +102,12 @@ export default async function DashboardPage(props: {
 
                 <div className="ml-auto flex items-center gap-4">
                     <ThemeToggle />
-                    <UserNav user={userData} currencies={currencies} />
+                    <UserNav
+                        user={userData}
+                        currencies={currencies}
+                        workspaces={userMemberships}
+                        currentWorkspaceId={currentWorkspace.id}
+                    />
                 </div>
             </header>
 
@@ -129,9 +126,6 @@ export default async function DashboardPage(props: {
                         </div>
                         <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
                             <CardDescription className="font-medium">Ingresos del Mes</CardDescription>
-                            <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-full dark:bg-emerald-500/10">
-                                <ArrowUpRight size={18} />
-                            </div>
                         </CardHeader>
                         <CardContent>
                             <div className="text-3xl font-bold flex items-center gap-1.5">
@@ -154,9 +148,6 @@ export default async function DashboardPage(props: {
                         </div>
                         <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
                             <CardDescription className="font-medium">Gastos del Mes</CardDescription>
-                            <div className="p-1.5 bg-rose-50 text-rose-600 rounded-full dark:bg-rose-500/10">
-                                <ArrowDownLeft size={18} />
-                            </div>
                         </CardHeader>
                         <CardContent>
                             <div className="text-3xl font-bold text-rose-600 flex items-center gap-1.5">
