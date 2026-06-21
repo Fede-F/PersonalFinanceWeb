@@ -25,14 +25,21 @@ interface CategorySelectorProps {
     workspaceId: string
     categories: any[]
     onChange?: (value: string) => void
+    defaultValue?: string
 }
 
-export function CategorySelector({ workspaceId, categories: initialCategories, onChange }: CategorySelectorProps) {
+export function CategorySelector({ workspaceId, categories: initialCategories, onChange, defaultValue }: CategorySelectorProps) {
     const [open, setOpen] = React.useState(false)
-    const [value, setValue] = React.useState("")
+    const [value, setValue] = React.useState(defaultValue || "")
     const [categories, setCategories] = React.useState(initialCategories)
     const [search, setSearch] = React.useState("")
     const [isCreating, setIsCreating] = React.useState(false)
+
+    React.useEffect(() => {
+        if (defaultValue !== undefined) {
+            setValue(defaultValue || "")
+        }
+    }, [defaultValue])
 
     const handleCreateCategory = async (name: string) => {
         setIsCreating(true)

@@ -26,7 +26,7 @@ export function ConceptSelector({ quickConcepts, defaultValue, onChange }: Conce
             items: defaultValue ? [defaultValue] : [],
             onInitialize: function() {
                 if (defaultValue) {
-                    this.setValue(defaultValue)
+                    (this as any).setValue(defaultValue)
                 }
             },
             onChange: function(val: string) {

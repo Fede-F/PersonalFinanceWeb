@@ -21,6 +21,8 @@ import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { TransactionModal } from "@/components/transaction-modal"
 import { CreateWorkspaceForm } from "@/components/create-workspace-form"
+import { ActivityList } from "@/components/activity-list"
+import { FinancialStats } from "@/components/financial-stats"
 
 import { WorkspaceSwitcher } from "@/components/workspace-switcher"
 import { UserNav } from "@/components/user-nav"
@@ -165,6 +167,12 @@ export default async function DashboardPage(props: {
                     </Card>
                 </div>
 
+                {/* Financial Statistics (Donut & Savings Progress Bar) */}
+                <FinancialStats
+                    transactions={recentTransactions}
+                    preferredCurrency={preferredCurrency}
+                />
+
                 {/* Activity List */}
                 <div className="space-y-6">
                     <div className="flex items-center justify-between">
@@ -183,54 +191,15 @@ export default async function DashboardPage(props: {
                         />
                     </div>
 
-                    <Card className="border-none shadow-xl overflow-hidden animate-in fade-in duration-1000 delay-300 fill-mode-both">
-                        <div className="divide-y">
-                            {recentTransactions.length === 0 ? (
-                                <div className="p-12 text-center text-zinc-500 flex flex-col items-center gap-3">
-                                    <CalendarIcon size={40} className="opacity-20 text-zinc-400" />
-                                    <p>No hay transacciones en este período.</p>
-                                </div>
-                            ) : (
-                                recentTransactions.map((tx) => (
-                                    <div key={tx.id} className="p-4 flex items-center gap-4 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors group">
-                                        <div className={cn(
-                                            "w-12 h-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-105 shadow-sm",
-                                            tx.type === 'INCOME' ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10" :
-                                            tx.type === 'EXPENSE' ? "bg-rose-50 text-rose-600 dark:bg-rose-500/10" :
-                                            "bg-zinc-100 text-zinc-600 dark:bg-zinc-800"
-                                        )}>
-                                            {tx.type === 'INCOME' ? <Plus size={20} /> :
-                                             tx.type === 'EXPENSE' ? <ArrowDownLeft size={20} /> :
-                                             <ArrowRightLeft size={20} />}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="font-bold text-zinc-900 dark:text-zinc-100 truncate">{tx.concept}</p>
-                                            <div className="flex items-center gap-2 text-zinc-500 text-sm">
-                                                <span className="flex items-center gap-1"><CalendarIcon size={12} /> {format(new Date(tx.date), "dd MMM", { locale: es })}</span>
-                                                <span className="opacity-30">•</span>
-                                                <span className="flex items-center gap-1 font-medium">{tx.categoryName || "Gral."}</span>
-                                            </div>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className={cn(
-                                                "font-black text-lg tabular-nums",
-                                                tx.type === 'INCOME' ? "text-emerald-600" :
-                                                tx.type === 'EXPENSE' ? "text-rose-600" :
-                                                "text-zinc-900 dark:text-zinc-100"
-                                            )}>
-                                                {tx.type === 'INCOME' ? '+' : '-'}{tx.currency} {parseFloat(tx.amount).toLocaleString()}
-                                            </p>
-                                            {tx.currency !== preferredCurrency && (
-                                                <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-tighter">
-                                                    ≈ {preferredCurrency} {(parseFloat(tx.amount) * parseFloat(tx.exchangeRate)).toLocaleString()}
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                    </Card>
+                    <ActivityList
+                        recentTransactions={recentTransactions.slice(0, 10)}
+                        workspaceId={currentWorkspace.id}
+                        accounts={accounts}
+                        categories={categories}
+                        currencies={currencies}
+                        quickConcepts={quickConcepts}
+                        preferredCurrency={preferredCurrency}
+                    />
                 </div>
             </main>
         </div>

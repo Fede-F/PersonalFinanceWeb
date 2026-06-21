@@ -18,8 +18,14 @@ export function MoneyInput({ name, placeholder, defaultValue = "", required, cla
 
     // Formatear el valor inicial si existe
     React.useEffect(() => {
-        if (defaultValue) {
-            formatAndSetValues(defaultValue)
+        if (defaultValue !== undefined && defaultValue !== "") {
+            const defaultNum = parseFloat(defaultValue)
+            const rawNum = parseFloat(rawValue)
+            if (!isNaN(defaultNum) && defaultNum === rawNum && displayValue !== "") {
+                return
+            }
+            const formattedDefault = isNaN(defaultNum) ? defaultValue : defaultNum.toFixed(2)
+            formatAndSetValues(formattedDefault)
         }
     }, [defaultValue])
 

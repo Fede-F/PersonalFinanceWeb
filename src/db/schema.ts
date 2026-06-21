@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, varchar, decimal, unique, jsonb, integer, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, varchar, decimal, unique, jsonb, integer, primaryKey, boolean } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import type { AdapterAccountType } from "next-auth/adapters";
 
@@ -133,6 +133,11 @@ export const transactions = pgTable("transactions", {
     exchangeRate: decimal("exchange_rate", { precision: 20, scale: 10 }).notNull().default("1.0"), // Snapshot at transaction time
     date: timestamp("date").notNull().defaultNow(),
     description: text("description"), // This is 'Detalle'
+    isFixed: boolean("is_fixed").default(false).notNull(),
+    isInstallments: boolean("is_installments").default(false).notNull(),
+    installmentsCount: integer("installments_count"),
+    parentId: uuid("parent_id"),
+    installmentNumber: integer("installment_number"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

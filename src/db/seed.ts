@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { db } from "./index";
-import { users, workspaces, workspaceMembers, supportedCurrencies } from "./schema";
+import { users, workspaces, workspaceMembers, supportedCurrencies, marketRates } from "./schema";
 
 async function main() {
     console.log("🌱 Seeding database...");
@@ -14,28 +14,44 @@ async function main() {
         { code: "EUR", name: "Euro", type: "FIAT" },
     ]).onConflictDoNothing();
 
-    // 2. Seed Test User
+    // 2. Seed Mock Market Rates (for currency conversion)
+    console.log("Inserting mock market rates...");
+    const now = new Date()
+    await db.insert(marketRates).values([
+        { baseCurrency: "USD", targetCurrency: "ARS", rate: "950.00", date: now },
+        { baseCurrency: "EUR", targetCurrency: "ARS", rate: "1020.00", date: now },
+        { baseCurrency: "BRL", targetCurrency: "ARS", rate: "175.00", date: now },
+        
+        // Reverse rates
+        { baseCurrency: "ARS", targetCurrency: "USD", rate: (1 / 950).toFixed(10), date: now },
+        { baseCurrency: "ARS", targetCurrency: "EUR", rate: (1 / 1020).toFixed(10), date: now },
+        { baseCurrency: "ARS", targetCurrency: "BRL", rate: (1 / 175).toFixed(10), date: now },
+    ]).onConflictDoNothing();
+
+    // 3. Seed Test User
     console.log("Inserting test user...");
     const [testUser] = await db.insert(users).values({
         email: "test@example.com",
         name: "Test User",
-    }).returning();
+    }).onConflictDoNothing().returning();
 
-    // 3. Seed Personal Workspace
-    console.log("Inserting personal workspace...");
-    const [testWorkspace] = await db.insert(workspaces).values({
-        name: "Mi Hogar",
-        ownerId: testUser.id,
-        baseCurrency: "ARS",
-    }).returning();
+    if (testUser) {
+        // 4. Seed Personal Workspace
+        console.log("Inserting personal workspace...");
+        const [testWorkspace] = await db.insert(workspaces).values({
+            name: "Mi Hogar",
+            ownerId: testUser.id,
+            baseCurrency: "ARS",
+        }).returning();
 
-    // 4. Join user to workspace as OWNER
-    console.log("Joining user to workspace...");
-    await db.insert(workspaceMembers).values({
-        workspaceId: testWorkspace.id,
-        userId: testUser.id,
-        role: "OWNER",
-    });
+        // 5. Join user to workspace as OWNER
+        console.log("Joining user to workspace...");
+        await db.insert(workspaceMembers).values({
+            workspaceId: testWorkspace.id,
+            userId: testUser.id,
+            role: "OWNER",
+        });
+    }
 
     console.log("✅ Seeding finished!");
 }

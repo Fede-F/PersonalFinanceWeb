@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { transactionSchema } from "@/lib/validations"
@@ -13,7 +13,6 @@ import {
     DialogDescription,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -24,13 +23,13 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { Plus, AlertCircle, CalendarIcon, HelpCircle } from "lucide-react"
+import { AlertCircle, CalendarIcon, HelpCircle, Pencil } from "lucide-react"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import { createTransaction } from "@/app/actions/transactions"
+import { updateTransaction } from "@/app/actions/transactions"
 import { toast } from "sonner"
 import { CategorySelector } from "./category-selector"
 import { MoneyInput } from "./money-input"
@@ -43,32 +42,31 @@ import {
     AccordionTrigger,
 } from "@/components/ui/accordion"
 
-type TransactionFormValues = z.infer<typeof transactionSchema>
-
-interface TransactionModalProps {
+interface EditTransactionModalProps {
+    open: boolean
+    onOpenChange: (open: boolean) => void
+    transaction: any
     workspaceId: string
     accounts: any[]
     categories: any[]
     currencies: any[]
     quickConcepts: string[]
-    defaultCurrency?: string
-    userDefaultCurrency?: string
 }
 
-export function TransactionModal({
+export function EditTransactionModal({
+    open,
+    onOpenChange,
+    transaction,
     workspaceId,
     accounts,
     categories,
     currencies,
     quickConcepts,
-    defaultCurrency,
-    userDefaultCurrency
-}: TransactionModalProps) {
-    const [open, setOpen] = useState(false)
+}: EditTransactionModalProps) {
     const [loading, setLoading] = useState(false)
     const [showTooltip, setShowTooltip] = useState(false)
+    const [updateMode, setUpdateMode] = useState<'single' | 'subsequent'>('single')
 
-    // Configuración de React Hook Form
     const {
         register,
         handleSubmit,
@@ -78,26 +76,50 @@ export function TransactionModal({
         formState: { errors }
     } = useForm<any>({
         resolver: zodResolver(transactionSchema) as any,
-        defaultValues: {
-            workspaceId,
-            type: "EXPENSE",
-            currency: userDefaultCurrency || defaultCurrency || "USD",
-            amount: "",
-            concept: "",
-            date: new Date(),
-            isFixed: false,
-            isInstallments: false,
-            installmentsCount: 1,
-        }
     })
 
-    // Sincronizar campos personalizados manualmente (ya que no usan register directo)
+    // Sincronizar campos personalizados manualmente
     const onConceptChange = (val: string) => setValue("concept", val, { shouldValidate: true })
     const onCategoryChange = (val: string) => setValue("categoryId", val, { shouldValidate: true })
     const onCurrencyChange = (val: string) => setValue("currency", val, { shouldValidate: true })
     const onAmountChange = (val: string) => setValue("amount", val, { shouldValidate: true })
 
+    // Reset parameters when opening edit modal with target transaction
+    useEffect(() => {
+        if (transaction && open) {
+            reset({
+                workspaceId: transaction.workspaceId,
+                accountId: transaction.accountId || undefined,
+                categoryId: transaction.categoryId || undefined,
+                type: transaction.type,
+                concept: transaction.concept,
+                amount: transaction.amount,
+                currency: transaction.currency,
+                description: transaction.description || "",
+                date: new Date(transaction.date),
+                isFixed: transaction.isFixed,
+                isInstallments: transaction.isInstallments,
+                installmentsCount: transaction.installmentsCount || 1,
+            })
+            // If editing a recurring transaction, default update mode to subsequent
+            if (transaction.parentId) {
+                setUpdateMode('subsequent')
+            } else {
+                setUpdateMode('single')
+            }
+        }
+    }, [transaction, open, reset])
+
+    // Log errors for debugging
+    useEffect(() => {
+        if (Object.keys(errors).length > 0) {
+            console.log("Edit form validation errors:", errors)
+        }
+    }, [errors])
+
     async function onSubmit(data: any) {
+        console.log("Submitting edit transaction data:", data)
+        if (!transaction) return
         setLoading(true)
         try {
             const formData = new FormData()
@@ -109,49 +131,76 @@ export function TransactionModal({
                 }
             })
 
-            const result = await createTransaction(formData)
+            const result = await updateTransaction(transaction.id, formData, updateMode)
 
             if (result.success) {
-                toast.success("Transacción registrada correctamente")
-                reset()
-                setOpen(false)
+                toast.success("Transacción modificada correctamente")
+                onOpenChange(false)
             } else {
                 toast.error(result.error || "Ocurrió un error inesperado")
             }
         } catch (error) {
             console.error(error)
-            toast.error("Error al procesar la transacción")
+            toast.error("Error al procesar la modificación")
         } finally {
             setLoading(false)
         }
     }
 
+    if (!transaction) return null
+
+    const hasParent = !!transaction.parentId
+
     return (
-        <Dialog open={open} onOpenChange={(v) => {
-            setOpen(v)
-            if (!v) reset()
-        }}>
-            <DialogTrigger asChild>
-                <Button size="sm" className="gap-2 bg-emerald-600 hover:bg-emerald-700">
-                    <Plus size={16} /> Nueva Transacción
-                </Button>
-            </DialogTrigger>
+        <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                    <DialogTitle>Nueva Transacción</DialogTitle>
+                    <DialogTitle className="flex items-center gap-2">
+                        <Pencil className="h-5 w-5 text-emerald-600" />
+                        Modificar Transacción
+                    </DialogTitle>
                     <DialogDescription>
-                        Registra un nuevo ingreso o gasto en tu cuenta.
+                        Actualiza la información de la transacción seleccionada.
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4">
+
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-3">
                     <input type="hidden" {...register("workspaceId")} />
+
+                    {hasParent && (
+                        <div className="p-3 bg-zinc-50 dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 space-y-2.5">
+                            <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">¿A qué transacciones aplicar los cambios?</p>
+                            
+                            <label className="flex items-center gap-2.5 cursor-pointer text-sm font-medium text-zinc-800 dark:text-zinc-200 select-none">
+                                <input
+                                    type="radio"
+                                    name="updateMode"
+                                    checked={updateMode === 'single'}
+                                    onChange={() => setUpdateMode('single')}
+                                    className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-zinc-300 dark:border-zinc-700 accent-emerald-600 cursor-pointer"
+                                />
+                                <span>Solo a esta transacción</span>
+                            </label>
+
+                            <label className="flex items-center gap-2.5 cursor-pointer text-sm font-medium text-zinc-800 dark:text-zinc-200 select-none">
+                                <input
+                                    type="radio"
+                                    name="updateMode"
+                                    checked={updateMode === 'subsequent'}
+                                    onChange={() => setUpdateMode('subsequent')}
+                                    className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-zinc-300 dark:border-zinc-700 accent-emerald-600 cursor-pointer"
+                                />
+                                <span>A esta cuota/fecha y las siguientes</span>
+                            </label>
+                        </div>
+                    )}
 
                     <div className="flex gap-4 items-end">
                         <div className="flex-[2] space-y-2">
                             <Label htmlFor="type" className={errors.type ? "text-rose-500" : ""}>Tipo de Operación</Label>
                             <Select 
                                 onValueChange={(v) => setValue("type", v as any, { shouldValidate: true })} 
-                                defaultValue="EXPENSE"
+                                value={watch("type")}
                             >
                                 <SelectTrigger className={errors.type ? "border-rose-500 ring-rose-500/20" : ""}>
                                     <SelectValue placeholder="Tipo" />
@@ -202,6 +251,7 @@ export function TransactionModal({
                         <ConceptSelector
                             quickConcepts={quickConcepts}
                             onChange={onConceptChange}
+                            defaultValue={watch("concept")}
                         />
                         {errors.concept?.message && <p className="text-[10px] text-rose-500 font-medium">{errors.concept.message as string}</p>}
                     </div>
@@ -212,6 +262,7 @@ export function TransactionModal({
                             workspaceId={workspaceId}
                             categories={categories}
                             onChange={onCategoryChange}
+                            defaultValue={watch("categoryId")}
                         />
                         {errors.categoryId && <p className="text-[10px] text-rose-500 font-medium">{errors.categoryId.message as string}</p>}
                     </div>
@@ -224,6 +275,7 @@ export function TransactionModal({
                                 placeholder="0,00"
                                 onChange={onAmountChange}
                                 className={errors.amount ? "border-rose-500 ring-rose-500/20" : ""}
+                                defaultValue={watch("amount")}
                             />
                             {errors.amount?.message && <p className="text-[10px] text-rose-500 font-medium">{errors.amount.message as string}</p>}
                         </div>
@@ -341,9 +393,22 @@ export function TransactionModal({
                         </AccordionItem>
                     </Accordion>
 
-                    <div className="pt-2">
-                        <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 font-bold py-6" disabled={loading}>
-                            {loading ? "Registrando..." : "Guardar Transacción"}
+                    <div className="pt-2 flex gap-3">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="flex-1 py-6"
+                            onClick={() => onOpenChange(false)}
+                            disabled={loading}
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            type="submit"
+                            className="flex-1 bg-emerald-600 hover:bg-emerald-700 font-bold py-6"
+                            disabled={loading}
+                        >
+                            {loading ? "Guardando..." : "Guardar Cambios"}
                         </Button>
                     </div>
                 </form>
@@ -351,5 +416,3 @@ export function TransactionModal({
         </Dialog>
     )
 }
-
-

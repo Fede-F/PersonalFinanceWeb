@@ -9,7 +9,92 @@ export async function getDashboardData(workspaceId: string, month?: number, year
     const session = await auth()
     if (!session?.user?.id) throw new Error("No autorizado")
 
-    // 1. Determinar el rango de fechas (default: mes actual)
+    // 1. Auto-extension of fixed transactions
+    try {
+        const maxDatesByParent = await db
+            .select({
+                parentId: transactions.parentId,
+                maxDate: sql<Date>`max(${transactions.date})`
+            })
+            .from(transactions)
+            .where(
+                and(
+                    eq(transactions.workspaceId, workspaceId),
+                    eq(transactions.isFixed, true)
+                )
+            )
+            .groupBy(transactions.parentId)
+
+        const oneYearFromNow = new Date()
+        oneYearFromNow.setMonth(oneYearFromNow.getMonth() + 12)
+
+        for (const group of maxDatesByParent) {
+            if (group.parentId && group.maxDate) {
+                const maxDate = new Date(group.maxDate)
+                if (maxDate < oneYearFromNow) {
+                    const [lastTx] = await db
+                        .select()
+                        .from(transactions)
+                        .where(
+                            and(
+                                eq(transactions.parentId, group.parentId),
+                                eq(transactions.date, group.maxDate)
+                            )
+                        )
+                        .limit(1)
+
+                    if (lastTx) {
+                        const rowsToInsert = []
+                        let balanceAdjustment = 0
+                        const txAmountInAccountCurrency = parseFloat(lastTx.amount) * parseFloat(lastTx.exchangeRate)
+                        const factor = lastTx.type === "INCOME" ? 1 : (lastTx.type === "EXPENSE" ? -1 : 0)
+
+                        for (let i = 1; i <= 12; i++) {
+                            const newDate = new Date(maxDate)
+                            newDate.setMonth(maxDate.getMonth() + i)
+
+                            rowsToInsert.push({
+                                workspaceId: lastTx.workspaceId,
+                                accountId: lastTx.accountId,
+                                categoryId: lastTx.categoryId,
+                                type: lastTx.type,
+                                concept: lastTx.concept,
+                                amount: lastTx.amount,
+                                currency: lastTx.currency,
+                                description: lastTx.description,
+                                exchangeRate: lastTx.exchangeRate,
+                                isFixed: true,
+                                isInstallments: false,
+                                parentId: lastTx.parentId,
+                                date: newDate,
+                            })
+                            balanceAdjustment += txAmountInAccountCurrency * factor
+                        }
+                        if (rowsToInsert.length > 0) {
+                            await db.insert(transactions).values(rowsToInsert)
+
+                            if (lastTx.accountId && balanceAdjustment !== 0) {
+                                const [account] = await db
+                                    .select()
+                                    .from(financialAccounts)
+                                    .where(eq(financialAccounts.id, lastTx.accountId))
+                                if (account) {
+                                    const newBalance = parseFloat(account.balance) + balanceAdjustment
+                                    await db.update(financialAccounts)
+                                        .set({ balance: newBalance.toFixed(2), updatedAt: new Date() })
+                                        .where(eq(financialAccounts.id, lastTx.accountId))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } catch (err) {
+        console.error("Error auto-extending fixed transactions:", err)
+    }
+
+    // 2. Determinar el rango de fechas (default: mes actual)
     const now = new Date()
     const targetMonth = month !== undefined ? month : now.getMonth()
     const targetYear = year !== undefined ? year : now.getFullYear()
@@ -47,6 +132,7 @@ export async function getDashboardData(workspaceId: string, month?: number, year
     const recentTransactions = await db
         .select({
             id: transactions.id,
+            workspaceId: transactions.workspaceId,
             amount: transactions.amount,
             currency: transactions.currency,
             type: transactions.type,
@@ -54,6 +140,13 @@ export async function getDashboardData(workspaceId: string, month?: number, year
             description: transactions.description,
             concept: transactions.concept,
             exchangeRate: transactions.exchangeRate,
+            isFixed: transactions.isFixed,
+            isInstallments: transactions.isInstallments,
+            installmentsCount: transactions.installmentsCount,
+            installmentNumber: transactions.installmentNumber,
+            parentId: transactions.parentId,
+            accountId: transactions.accountId,
+            categoryId: transactions.categoryId,
             accountName: financialAccounts.name,
             categoryName: categories.name,
             categoryColor: categories.color,
@@ -70,7 +163,6 @@ export async function getDashboardData(workspaceId: string, month?: number, year
             )
         )
         .orderBy(desc(transactions.date))
-        .limit(10)
 
     return {
         accounts: accountsList,

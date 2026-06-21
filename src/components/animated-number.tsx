@@ -35,8 +35,8 @@ export function AnimatedNumber({ value, prefix = "", duration = 1000, className 
   }, [value, duration])
 
   return (
-    <span className={className}>
-      {prefix} {displayValue.toLocaleString(undefined, { 
+    <span className={className} suppressHydrationWarning>
+      {prefix} {displayValue.toLocaleString("es-AR", { 
         minimumFractionDigits: 0, 
         maximumFractionDigits: 0 
       })}

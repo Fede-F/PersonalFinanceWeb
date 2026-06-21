@@ -36,6 +36,12 @@ export function CurrencySelector({ currencies: initialCurrencies, defaultValue, 
     const [search, setSearch] = React.useState("")
     const [isCreating, setIsCreating] = React.useState(false)
 
+    React.useEffect(() => {
+        if (defaultValue !== undefined) {
+            setValue(defaultValue || "")
+        }
+    }, [defaultValue])
+
     const handleCreateCurrency = async (code: string) => {
         const upperCode = code.toUpperCase().trim()
         if (upperCode.length < 2 || upperCode.length > 5) {

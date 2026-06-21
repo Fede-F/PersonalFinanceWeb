@@ -23,6 +23,15 @@ export const transactionSchema = z.object({
     }),
     currency: z.string().length(3, "Código de moneda inválido"),
     description: z.string().trim().max(255).nullable().optional(),
+    isFixed: z.boolean().default(false),
+    isInstallments: z.boolean().default(false),
+    installmentsCount: z.any().transform((val) => {
+        if (val === undefined || val === null || val === "") return null;
+        const parsed = parseInt(val, 10);
+        return isNaN(parsed) ? null : parsed;
+    }).nullable().optional(),
+    parentId: z.string().uuid("ID de grupo inválido").nullable().optional(),
+    installmentNumber: z.coerce.number().int().min(1).nullable().optional(),
 
     date: z.union([z.date(), z.string(), z.null(), z.undefined()])
         .optional()
