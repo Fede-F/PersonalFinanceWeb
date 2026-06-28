@@ -8,8 +8,8 @@ postgres-data
 .dockerignore
 Dockerfile
 docker-compose*.yml
-.env*.local
-.env.development
+.env
+.env.*
 npm-debug.log
 yarn-debug.log
 yarn-error.log
