@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  finance-web-app:
+    image: ghcr.io/fede-f/personalfinanceweb:latest
+    restart: always
+    environment:
+      - VIRTUAL_HOST=finance.planner.ar
+      - LETSENCRYPT_HOST=finance.planner.ar
+      - LETSENCRYPT_EMAIL=infinitto@gmail.com
+      - VIRTUAL_PORT=3000
+      - PORT=3000
+      - DATABASE_URL=${DATABASE_URL}
+      - AUTH_SECRET=${AUTH_SECRET}
+      - AUTH_TRUST_HOST=true
+      # Proveedores de OAuth (opcionales, configurar en .env.prod en el VPS)
+      - AUTH_GITHUB_ID=${AUTH_GITHUB_ID}
+      - AUTH_GITHUB_SECRET=${AUTH_GITHUB_SECRET}
+    expose:
+      - "3000"
+    networks:
+      - nginx-proxy
+
+networks:
+  nginx-proxy:
+    external: true

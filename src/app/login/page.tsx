@@ -115,50 +115,6 @@ export default function LoginPage() {
                             )}
                         </Button>
                     </form>
-
-                    <div className="relative">
-                        <div className="absolute inset-0 flex items-center">
-                            <span className="w-full border-t border-zinc-200 dark:border-zinc-800" />
-                        </div>
-                        <div className="relative flex justify-center text-xs uppercase">
-                            <span className="bg-zinc-50 dark:bg-zinc-950 px-2 text-zinc-500">
-                                O continúa con
-                            </span>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <Button
-                            variant="outline"
-                            className="w-full border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-900"
-                            onClick={() => handleSocialLogin("github")}
-                            disabled={!!isSocialLoading}
-                        >
-                            {isSocialLoading === "github" ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                                <>
-                                    <Github className="mr-2 h-4 w-4" />
-                                    GitHub
-                                </>
-                            )}
-                        </Button>
-                        <Button
-                            variant="outline"
-                            className="w-full border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-900"
-                            onClick={() => handleSocialLogin("google")}
-                            disabled={!!isSocialLoading}
-                        >
-                            {isSocialLoading === "google" ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                                <>
-                                    <Chrome className="mr-2 h-4 w-4" />
-                                    Google
-                                </>
-                            )}
-                        </Button>
-                    </div>
                 </CardContent>
                 <CardFooter className="flex flex-col space-y-4 items-center">
                     <p className="text-sm text-zinc-500 dark:text-zinc-400">
