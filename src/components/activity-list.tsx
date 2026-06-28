@@ -24,6 +24,29 @@ interface ActivityListProps {
     currencies: any[]
     quickConcepts: string[]
     preferredCurrency: string
+    isShared?: boolean
+}
+
+const AVATAR_COLORS = [
+    "bg-rose-500",
+    "bg-orange-500",
+    "bg-amber-500",
+    "bg-emerald-500",
+    "bg-teal-500",
+    "bg-sky-500",
+    "bg-indigo-500",
+    "bg-violet-500",
+    "bg-fuchsia-500",
+    "bg-pink-500"
+]
+
+function getAvatarBgColor(name: string) {
+    let hash = 0
+    for (let i = 0; i < name.length; i++) {
+        hash = name.charCodeAt(i) + ((hash << 5) - hash)
+    }
+    const idx = Math.abs(hash) % AVATAR_COLORS.length
+    return AVATAR_COLORS[idx]
 }
 
 export function ActivityList({
@@ -33,7 +56,8 @@ export function ActivityList({
     categories,
     currencies,
     quickConcepts,
-    preferredCurrency
+    preferredCurrency,
+    isShared = false
 }: ActivityListProps) {
     const [editOpen, setEditOpen] = useState(false)
     const [deleteOpen, setDeleteOpen] = useState(false)
@@ -85,10 +109,24 @@ export function ActivityList({
                                             </span>
                                         )}
                                     </div>
-                                    <div className="flex items-center gap-2 text-zinc-500 text-sm">
+                                    <div className="flex items-center gap-2 text-zinc-500 text-sm flex-wrap">
                                         <span suppressHydrationWarning className="flex items-center gap-1"><CalendarIcon size={12} /> {format(new Date(tx.date), "dd MMM", { locale: es })}</span>
                                         <span className="opacity-30">•</span>
                                         <span className="flex items-center gap-1 font-medium">{tx.categoryName || "Gral."}</span>
+                                        {isShared && tx.creatorName && (
+                                            <>
+                                                <span className="opacity-30">•</span>
+                                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/60 max-w-[125px] truncate select-none">
+                                                    <span className={cn(
+                                                        "h-3.5 w-3.5 rounded-full text-[8px] font-extrabold flex items-center justify-center text-white shrink-0",
+                                                        getAvatarBgColor(tx.creatorName)
+                                                    )}>
+                                                        {tx.creatorName.charAt(0).toUpperCase()}
+                                                    </span>
+                                                    <span className="truncate">{tx.creatorName}</span>
+                                                </span>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">

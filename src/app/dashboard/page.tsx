@@ -1,7 +1,7 @@
 import { auth } from "@/auth"
 import { db } from "@/db"
 import { workspaces, workspaceMembers, supportedCurrencies, users } from "@/db/schema"
-import { eq } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 import { Card, CardHeader, CardContent, CardDescription } from "@/components/ui/card"
 import { getDashboardData } from "@/app/actions/dashboard"
 import { redirect } from "next/navigation"
@@ -21,6 +21,8 @@ import { PeriodSelector } from "@/components/period-selector"
 import { AnimatedNumber } from "@/components/animated-number"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { ThemeSync } from "@/components/theme-sync"
+import { NotificationBell } from "@/components/notification-bell"
+import { ActiveWorkspaceTracker } from "@/components/active-workspace-tracker"
 
 export default async function DashboardPage(props: {
     searchParams: Promise<{ workspaceId?: string; month?: string; year?: string }>
@@ -41,6 +43,7 @@ export default async function DashboardPage(props: {
             name: workspaces.name,
             baseCurrency: workspaces.baseCurrency,
             ownerId: workspaces.ownerId,
+            memberCount: sql<number>`(SELECT count(*)::int FROM workspace_members WHERE workspace_members.workspace_id = workspaces.id)`
         })
         .from(workspaces)
         .innerJoin(workspaceMembers, eq(workspaces.id, workspaceMembers.workspaceId))
@@ -63,7 +66,17 @@ export default async function DashboardPage(props: {
         )
     }
 
-    const selectedWorkspaceId = searchParams.workspaceId || userMemberships[0].id
+    let selectedWorkspaceId = searchParams.workspaceId
+    if (!selectedWorkspaceId && userData.lastActiveWorkspaceId) {
+        const stillMember = userMemberships.some(w => w.id === userData.lastActiveWorkspaceId)
+        if (stillMember) {
+            selectedWorkspaceId = userData.lastActiveWorkspaceId
+        }
+    }
+    if (!selectedWorkspaceId) {
+        selectedWorkspaceId = userMemberships[0].id
+    }
+
     const currentWorkspace = userMemberships.find(w => w.id === selectedWorkspaceId) || userMemberships[0]
 
     const { accounts, recentTransactions, categories, currencies, quickConcepts } = await getDashboardData(currentWorkspace.id, month, year)
@@ -83,6 +96,7 @@ export default async function DashboardPage(props: {
         <div className="flex flex-col min-h-screen bg-zinc-50/50 dark:bg-zinc-950">
             {/* Theme synchronizer */}
             <ThemeSync savedTheme={userData.theme} />
+            <ActiveWorkspaceTracker workspaceId={currentWorkspace.id} />
 
             {/* Header */}
             <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-white/80 backdrop-blur-md px-6 dark:bg-zinc-900/80">
@@ -102,6 +116,7 @@ export default async function DashboardPage(props: {
 
                 <div className="ml-auto flex items-center gap-4">
                     <ThemeToggle />
+                    <NotificationBell />
                     <UserNav
                         user={userData}
                         currencies={currencies}
@@ -196,6 +211,7 @@ export default async function DashboardPage(props: {
                         currencies={currencies}
                         quickConcepts={quickConcepts}
                         preferredCurrency={preferredCurrency}
+                        isShared={(currentWorkspace as any).memberCount > 1}
                     />
                 </div>
             </main>

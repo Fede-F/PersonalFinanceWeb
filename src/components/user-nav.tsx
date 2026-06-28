@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { signOut } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import { User, LogOut, Settings, Coins } from "lucide-react"
+import { User, LogOut, Settings, Coins, UserPlus } from "lucide-react"
 import {
     Select,
     SelectContent,
@@ -25,6 +25,7 @@ import { updateDefaultCurrency } from "@/app/actions/user"
 import { toast } from "sonner"
 import { useState } from "react"
 import { WorkspaceSettingsDialog } from "./workspace-settings-dialog"
+import { InviteMembersDialog } from "./invite-members-dialog"
 
 interface UserNavProps {
     user: {
@@ -47,6 +48,7 @@ interface UserNavProps {
 export function UserNav({ user, currencies, workspaces, currentWorkspaceId }: UserNavProps) {
     const router = useRouter()
     const [settingsOpen, setSettingsOpen] = useState(false)
+    const [inviteOpen, setInviteOpen] = useState(false)
 
     const handleCurrencyChange = async (value: string) => {
         const result = await updateDefaultCurrency(value)
@@ -103,6 +105,10 @@ export function UserNav({ user, currencies, workspaces, currentWorkspaceId }: Us
                     </DropdownMenuGroup>
                     <DropdownMenuSeparator />
                     <DropdownMenuGroup>
+                        <DropdownMenuItem onClick={() => setInviteOpen(true)} className="cursor-pointer">
+                            <UserPlus className="mr-2 h-4 w-4" />
+                            <span>Invitar usuario al workspace</span>
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setSettingsOpen(true)} className="cursor-pointer">
                             <Settings className="mr-2 h-4 w-4" />
                             <span>Configurar Workspaces</span>
@@ -126,6 +132,14 @@ export function UserNav({ user, currencies, workspaces, currentWorkspaceId }: Us
             <WorkspaceSettingsDialog
                 open={settingsOpen}
                 onOpenChange={setSettingsOpen}
+                workspaces={workspaces}
+                currentWorkspaceId={currentWorkspaceId}
+                userId={user.id || ""}
+            />
+
+            <InviteMembersDialog
+                open={inviteOpen}
+                onOpenChange={setInviteOpen}
                 workspaces={workspaces}
                 currentWorkspaceId={currentWorkspaceId}
                 userId={user.id || ""}

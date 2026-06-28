@@ -2,7 +2,7 @@
 
 import { auth } from "@/auth"
 import { db } from "@/db"
-import { transactions, financialAccounts, categories, supportedCurrencies } from "@/db/schema"
+import { transactions, financialAccounts, categories, supportedCurrencies, users } from "@/db/schema"
 import { eq, desc, sql, gte, lte, and } from "drizzle-orm"
 import { checkAndUpdateRates } from "@/lib/exchange-rates"
 
@@ -155,10 +155,14 @@ export async function getDashboardData(workspaceId: string, month?: number, year
             categoryName: categories.name,
             categoryColor: categories.color,
             categoryIcon: categories.icon,
+            createdById: transactions.createdById,
+            creatorName: users.name,
+            creatorEmail: users.email,
         })
         .from(transactions)
         .leftJoin(financialAccounts, eq(transactions.accountId, financialAccounts.id))
         .leftJoin(categories, eq(transactions.categoryId, categories.id))
+        .leftJoin(users, eq(transactions.createdById, users.id))
         .where(
             and(
                 eq(transactions.workspaceId, workspaceId),

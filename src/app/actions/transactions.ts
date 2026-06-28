@@ -114,6 +114,7 @@ export async function createTransaction(formData: FormData) {
                     categoryId: validatedData.categoryId || null,
                     description: validatedData.description || null,
                     exchangeRate,
+                    createdById: session.user.id,
                 })
                 balanceAdjustment += txAmountInAccountCurrency * factor
             }
@@ -138,6 +139,7 @@ export async function createTransaction(formData: FormData) {
                     categoryId: validatedData.categoryId || null,
                     description: validatedData.description || null,
                     exchangeRate,
+                    createdById: session.user.id,
                 })
                 balanceAdjustment += txAmountInAccountCurrency * factor
             }
@@ -153,6 +155,7 @@ export async function createTransaction(formData: FormData) {
                 categoryId: validatedData.categoryId || null,
                 description: validatedData.description || null,
                 exchangeRate,
+                createdById: session.user.id,
             }).returning()
             insertedTransactions = [newTransaction]
             balanceAdjustment = txAmountInAccountCurrency * factor

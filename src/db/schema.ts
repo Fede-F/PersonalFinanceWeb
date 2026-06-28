@@ -13,6 +13,7 @@ export const users = pgTable("users", {
     password: text("password"),
     defaultCurrency: varchar("default_currency", { length: 3 }).notNull().default("USD").references(() => supportedCurrencies.code),
     theme: varchar("theme", { length: 20 }).notNull().default("system"),
+    lastActiveWorkspaceId: uuid("last_active_workspace_id"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -79,6 +80,17 @@ export const marketRates = pgTable("market_rates", {
     uniquePairDate: unique().on(t.baseCurrency, t.targetCurrency, t.date),
 }));
 
+export const notifications = pgTable("notifications", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+    type: varchar("type", { length: 50 }).notNull(), // 'WORKSPACE_INVITATION', 'GENERAL'
+    title: text("title").notNull(),
+    message: text("message").notNull(),
+    read: boolean("read").default(false).notNull(),
+    data: jsonb("data").default({}).$type<{ workspaceId?: string, workspaceName?: string, role?: string, status?: 'PENDING' | 'ACCEPTED' | 'REJECTED' }>(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // --- Tenant Tables (Multi-tenancy) ---
 
 export const workspaces = pgTable("workspaces", {
@@ -139,6 +151,7 @@ export const transactions = pgTable("transactions", {
     installmentsCount: integer("installments_count"),
     parentId: uuid("parent_id"),
     installmentNumber: integer("installment_number"),
+    createdById: uuid("created_by_id").references(() => users.id, { onDelete: 'set null' }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -165,6 +178,8 @@ export const userRelations = relations(users, ({ many }) => ({
     sessions: many(sessions),
     memberships: many(workspaceMembers),
     ownedWorkspaces: many(workspaces),
+    notifications: many(notifications),
+    createdTransactions: many(transactions),
 }));
 
 export const workspaceRelations = relations(workspaces, ({ one, many }) => ({
@@ -217,5 +232,16 @@ export const transactionRelations = relations(transactions, ({ one }) => ({
     category: one(categories, {
         fields: [transactions.categoryId],
         references: [categories.id],
+    }),
+    creator: one(users, {
+        fields: [transactions.createdById],
+        references: [users.id],
+    }),
+}));
+
+export const notificationRelations = relations(notifications, ({ one }) => ({
+    user: one(users, {
+        fields: [notifications.userId],
+        references: [users.id],
     }),
 }));

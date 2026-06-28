@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Check, ChevronsUpDown, PlusCircle, LayoutDashboard, Settings } from "lucide-react"
+import { Check, ChevronsUpDown, PlusCircle, LayoutDashboard, Settings, Users } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
@@ -30,13 +30,16 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { CreateWorkspaceForm } from "./create-workspace-form"
 import { WorkspaceSettingsDialog } from "./workspace-settings-dialog"
 
+interface Workspace {
+    id: string
+    name: string
+    baseCurrency: string
+    ownerId: string
+    memberCount?: number
+}
+
 interface WorkspaceSwitcherProps {
-    workspaces: {
-        id: string
-        name: string
-        baseCurrency: string
-        ownerId: string
-    }[]
+    workspaces: Workspace[]
     currentWorkspaceId: string
     currencies: any[]
     userId: string
@@ -73,6 +76,9 @@ export function WorkspaceSwitcher({ workspaces, currentWorkspaceId, currencies, 
                             <div className="flex items-center gap-2 truncate mr-2">
                                 <LayoutDashboard className="h-4 w-4 text-emerald-500 shrink-0" />
                                 <span className="truncate font-medium">{selectedWorkspace?.name}</span>
+                                {selectedWorkspace && selectedWorkspace.memberCount && selectedWorkspace.memberCount > 1 ? (
+                                    <Users className="h-3.5 w-3.5 text-zinc-400 shrink-0 ml-1" />
+                                ) : null}
                             </div>
                             <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
                         </Button>
@@ -89,8 +95,11 @@ export function WorkspaceSwitcher({ workspaces, currentWorkspaceId, currencies, 
                                             onSelect={() => onWorkspaceSelect(w.id)}
                                             className="text-sm cursor-pointer"
                                         >
-                                            <LayoutDashboard className="mr-2 h-4 w-4" />
-                                            {w.name}
+                                            <LayoutDashboard className="mr-2 h-4 w-4 shrink-0" />
+                                            <span className="truncate">{w.name}</span>
+                                            {w.memberCount && w.memberCount > 1 ? (
+                                                <Users className="h-3.5 w-3.5 text-zinc-400 shrink-0 ml-1.5 inline" />
+                                            ) : null}
                                             <Check
                                                 className={cn(
                                                     "ml-auto h-4 w-4",

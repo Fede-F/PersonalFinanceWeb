@@ -4,11 +4,11 @@
 Una aplicación web de finanzas personales escalable y colaborativa.
 - **Core Value:** Gestión financiera multi-tenant basada en "Workspaces" (Hogares/Grupos).
 - **Enfoque:** API-first, Mobile-first (PWA), diseñada para automatización (n8n ready).
-- **Roadmap:**
-    1. Phase 1: Gestión de Gastos, Workspaces y Colaboración (FOCUS ACTUAL).
-        - *Nota:* El flujo de cuentas financieras (`accounts`) está preparado en BD pero deshabilitado en UI para simplificar la Phase 1.
-    2. Phase 2: Gestión activa de Cuentas, Bancos, Inversiones y Portafolio.
-    3. Phase 3: Roadmap financiero y Metas.
+- **Roadmap & Estado Actual:**
+    - [x] **Fase 1: Core de Gastos y Multimoneda** (Completado: registros fijos/en cuotas, estadísticas SVG, API de cotizaciones en background, Modo Oscuro persistente, y edición/eliminación de workspaces).
+    - [ ] **Gestión de Miembros en el Workspace** (FOCUS ACTUAL: Interfaz visual para invitar, ver y remover miembros colaboradores).
+    - [ ] **Fase 2: Gestión Activa de Cuentas e Inversiones** (Seguimiento de portafolios, cuentas de bancos y activos).
+    - [ ] **Fase 3: Inteligencia Financiera y Metas** (Comparativas de rendimiento vs. mes pasado, Cash Flow y presupuestos).
 
 ## 2. Tech Stack (Strict)
 - **Framework:** Next.js 14+ (App Router).
