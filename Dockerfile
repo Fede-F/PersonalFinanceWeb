@@ -17,6 +17,7 @@ COPY . .
 
 # Disable Next.js telemetry during build
 ENV NEXT_TELEMETRY_DISABLED 1
+ENV AUTH_SECRET="placeholder_secret_only_used_for_compilation_build"
 
 RUN npm run build
 

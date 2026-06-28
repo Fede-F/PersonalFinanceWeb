@@ -10,12 +10,8 @@ services:
       - LETSENCRYPT_EMAIL=infinitto@gmail.com
       - VIRTUAL_PORT=3000
       - PORT=3000
-      - DATABASE_URL=${DATABASE_URL}
-      - AUTH_SECRET=${AUTH_SECRET}
-      - AUTH_TRUST_HOST=true
-      # Proveedores de OAuth (opcionales, configurar en .env.prod en el VPS)
-      - AUTH_GITHUB_ID=${AUTH_GITHUB_ID}
-      - AUTH_GITHUB_SECRET=${AUTH_GITHUB_SECRET}
+    env_file:
+      - .env.prod
     expose:
       - "3000"
     networks:
