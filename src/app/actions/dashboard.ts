@@ -5,6 +5,7 @@ import { db } from "@/db"
 import { transactions, financialAccounts, categories, supportedCurrencies, users } from "@/db/schema"
 import { eq, desc, sql, gte, lte, and } from "drizzle-orm"
 import { checkAndUpdateRates } from "@/lib/exchange-rates"
+import { encryptAmount, decryptAmount } from "@/lib/encryption"
 
 export async function getDashboardData(workspaceId: string, month?: number, year?: number) {
     const session = await auth()
@@ -48,6 +49,7 @@ export async function getDashboardData(workspaceId: string, month?: number, year
                         .limit(1)
 
                     if (lastTx) {
+                        lastTx.amount = decryptAmount(lastTx.amount)
                         const rowsToInsert = []
                         let balanceAdjustment = 0
                         const txAmountInAccountCurrency = parseFloat(lastTx.amount) * parseFloat(lastTx.exchangeRate)
@@ -63,7 +65,7 @@ export async function getDashboardData(workspaceId: string, month?: number, year
                                 categoryId: lastTx.categoryId,
                                 type: lastTx.type,
                                 concept: lastTx.concept,
-                                amount: lastTx.amount,
+                                amount: encryptAmount(lastTx.amount),
                                 currency: lastTx.currency,
                                 description: lastTx.description,
                                 exchangeRate: lastTx.exchangeRate,
@@ -172,9 +174,14 @@ export async function getDashboardData(workspaceId: string, month?: number, year
         )
         .orderBy(desc(transactions.date))
 
+    const decryptedTransactions = recentTransactions.map(tx => ({
+        ...tx,
+        amount: decryptAmount(tx.amount)
+    }))
+
     return {
         accounts: accountsList,
-        recentTransactions,
+        recentTransactions: decryptedTransactions,
         categories: categoriesList,
         currencies: currenciesList,
         quickConcepts: quickConcepts.map(c => c.concept)

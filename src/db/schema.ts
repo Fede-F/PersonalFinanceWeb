@@ -141,7 +141,7 @@ export const transactions = pgTable("transactions", {
     categoryId: uuid("category_id").references(() => categories.id),
     type: varchar("type", { length: 20 }).notNull(), // 'INCOME', 'EXPENSE', 'TRANSFER'
     concept: text("concept").notNull(),
-    amount: decimal("amount", { precision: 20, scale: 2 }).notNull(),
+    amount: text("amount").notNull(),
     currency: varchar("currency", { length: 3 }).notNull().references(() => supportedCurrencies.code),
     exchangeRate: decimal("exchange_rate", { precision: 20, scale: 10 }).notNull().default("1.0"), // Snapshot at transaction time
     date: timestamp("date").notNull().defaultNow(),

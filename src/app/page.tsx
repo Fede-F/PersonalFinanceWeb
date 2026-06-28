@@ -1,9 +1,15 @@
-import { auth, signIn, signOut } from "@/auth"
+import { auth } from "@/auth"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 
+import { redirect } from "next/navigation"
+
 export default async function Home() {
   const session = await auth()
+
+  if (session) {
+    redirect("/dashboard")
+  }
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-zinc-50 to-white dark:from-zinc-950 dark:to-black p-4">
@@ -16,26 +22,9 @@ export default async function Home() {
         </p>
 
         <div className="flex justify-center gap-4">
-          {session ? (
-            <div className="flex flex-col items-center gap-4">
-              <p className="text-sm font-medium">Bienvenido, {session.user?.name || session.user?.email}</p>
-              <div className="flex gap-2">
-                <Button asChild variant="default" size="lg">
-                  <a href="/dashboard">Ir al Dashboard</a>
-                </Button>
-                <form action={async () => {
-                  "use server"
-                  await signOut()
-                }}>
-                  <Button variant="outline" size="lg">Cerrar Sesión</Button>
-                </form>
-              </div>
-            </div>
-          ) : (
-            <Button asChild size="lg" className="bg-emerald-600 hover:bg-emerald-700 text-white px-8">
-              <Link href="/login">Empezar Ahora</Link>
-            </Button>
-          )}
+          <Button asChild size="lg" className="bg-emerald-600 hover:bg-emerald-700 text-white px-8">
+            <Link href="/login">Empezar Ahora</Link>
+          </Button>
         </div>
       </div>
     </div>

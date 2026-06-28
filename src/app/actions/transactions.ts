@@ -8,6 +8,8 @@ import { eq, and, desc, inArray, gte, sql } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { transactionSchema } from "@/lib/validations"
 
+import { encryptAmount, decryptAmount } from "@/lib/encryption"
+
 export async function createTransaction(formData: FormData) {
     try {
         const session = await auth()
@@ -89,11 +91,15 @@ export async function createTransaction(formData: FormData) {
         let insertedTransactions: any[] = []
         let balanceAdjustment = 0
 
-        const txAmountInAccountCurrency = parseFloat(validatedData.amount) * parseFloat(exchangeRate)
+        const numericAmount = parseFloat(validatedData.amount)
+        const txAmountInAccountCurrency = numericAmount * parseFloat(exchangeRate)
         const factor = validatedData.type === "INCOME" ? 1 : (validatedData.type === "EXPENSE" ? -1 : 0)
 
         const baseId = randomUUID()
         const parentId = (validatedData.isFixed || validatedData.isInstallments) ? baseId : null
+        
+        // Encrypt the amount for database storage
+        const encryptedAmount = encryptAmount(validatedData.amount)
 
         if (validatedData.isFixed) {
             // Generate 24 months of transactions
@@ -106,6 +112,7 @@ export async function createTransaction(formData: FormData) {
 
                 rowsToInsert.push({
                     ...validatedData,
+                    amount: encryptedAmount,
                     id: i === 0 ? baseId : randomUUID(),
                     parentId,
                     installmentNumber: null,
@@ -131,6 +138,7 @@ export async function createTransaction(formData: FormData) {
 
                 rowsToInsert.push({
                     ...validatedData,
+                    amount: encryptedAmount,
                     id: i === 0 ? baseId : randomUUID(),
                     parentId,
                     installmentNumber: i + 1,
@@ -148,6 +156,7 @@ export async function createTransaction(formData: FormData) {
             // Single transaction
             const [newTransaction] = await db.insert(transactions).values({
                 ...validatedData,
+                amount: encryptedAmount,
                 id: baseId,
                 parentId: null,
                 installmentNumber: null,
@@ -190,6 +199,9 @@ export async function deleteTransaction(transactionId: string, deleteMode: 'sing
         const [targetTx] = await db.select().from(transactions).where(eq(transactions.id, transactionId))
         if (!targetTx) return { success: false, error: "Transacción no encontrada" }
 
+        // Decrypt amount
+        targetTx.amount = decryptAmount(targetTx.amount)
+
         // Verify membership
         const [membership] = await db
             .select()
@@ -200,7 +212,7 @@ export async function deleteTransaction(transactionId: string, deleteMode: 'sing
 
         let txsToDelete = []
         if (deleteMode === 'subsequent' && targetTx.parentId) {
-            txsToDelete = await db
+            const rawTxs = await db
                 .select()
                 .from(transactions)
                 .where(
@@ -209,6 +221,10 @@ export async function deleteTransaction(transactionId: string, deleteMode: 'sing
                         gte(transactions.date, targetTx.date)
                     )
                 )
+            txsToDelete = rawTxs.map(tx => ({
+                ...tx,
+                amount: decryptAmount(tx.amount)
+            }))
         } else {
             txsToDelete = [targetTx]
         }
@@ -264,6 +280,9 @@ export async function updateTransaction(
         // Find the transaction to edit
         const [targetTx] = await db.select().from(transactions).where(eq(transactions.id, transactionId))
         if (!targetTx) return { success: false, error: "Transacción no encontrada" }
+
+        // Decrypt amount
+        targetTx.amount = decryptAmount(targetTx.amount)
 
         // Verify membership
         const [membership] = await db
@@ -335,6 +354,7 @@ export async function updateTransaction(
             await db.update(transactions)
                 .set({
                     ...validatedData,
+                    amount: encryptAmount(validatedData.amount),
                     exchangeRate,
                     accountId: validatedData.accountId || null,
                     categoryId: validatedData.categoryId || null,
@@ -354,7 +374,7 @@ export async function updateTransaction(
             }
 
             // Fetch subsequent transactions in the group
-            const subsequentTxs = await db
+            const rawSubsequentTxs = await db
                 .select()
                 .from(transactions)
                 .where(
@@ -363,6 +383,10 @@ export async function updateTransaction(
                         gte(transactions.date, targetTx.date)
                     )
                 )
+            const subsequentTxs = rawSubsequentTxs.map(tx => ({
+                ...tx,
+                amount: decryptAmount(tx.amount)
+            }))
 
             // Revert all balances for these subsequent transactions
             for (const tx of subsequentTxs) {
@@ -384,6 +408,7 @@ export async function updateTransaction(
                 await db.update(transactions)
                     .set({
                         ...validatedData,
+                        amount: encryptAmount(validatedData.amount),
                         isInstallments: false,
                         installmentsCount: null,
                         installmentNumber: null,
@@ -425,6 +450,7 @@ export async function updateTransaction(
 
                             rowsToInsert.push({
                                 ...validatedData,
+                                amount: encryptAmount(validatedData.amount),
                                 id: randomUUID(),
                                 parentId: targetTx.parentId,
                                 installmentNumber: i + 1,
@@ -465,7 +491,7 @@ export async function updateTransaction(
                     await db.update(transactions)
                         .set({
                             concept: validatedData.concept,
-                            amount: validatedData.amount,
+                            amount: encryptAmount(validatedData.amount),
                             currency: validatedData.currency,
                             categoryId: validatedData.categoryId || null,
                             accountId: validatedData.accountId || null,
@@ -486,7 +512,7 @@ export async function updateTransaction(
                     await db.update(transactions)
                         .set({
                             concept: validatedData.concept,
-                            amount: validatedData.amount,
+                            amount: encryptAmount(validatedData.amount),
                             currency: validatedData.currency,
                             categoryId: validatedData.categoryId || null,
                             accountId: validatedData.accountId || null,
