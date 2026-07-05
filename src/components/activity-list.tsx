@@ -141,7 +141,12 @@ export function ActivityList({
                                         </p>
                                         {tx.currency !== preferredCurrency && (
                                             <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-tighter">
-                                                ≈ {preferredCurrency} {(parseFloat(tx.amount) * parseFloat(tx.exchangeRate)).toLocaleString("es-AR")}
+                                                ≈ {preferredCurrency} {tx.amountInPreferred.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                                            </p>
+                                        )}
+                                        {tx.currency !== "USD" && preferredCurrency !== "USD" && (
+                                            <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-tighter mt-0.5">
+                                                ≈ USD {tx.amountInUSD.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                                             </p>
                                         )}
                                     </div>

@@ -37,6 +37,30 @@ export async function createCategory(formData: FormData) {
     return newCategory
 }
 
+export async function deleteCategory(formData: FormData) {
+    const session = await auth();
+    if (!session?.user?.id) throw new Error("Unauthorized");
+
+    const categoryId = formData.get("categoryId") as string;
+    const workspaceId = formData.get("workspaceId") as string;
+
+    if (!workspaceId || !categoryId) throw new Error("Missing required fields");
+
+    // Verify membership
+    const [membership] = await db
+        .select()
+        .from(workspaceMembers)
+        .where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, session.user.id)));
+
+    if (!membership) throw new Error("Not a member of this workspace");
+
+    // Delete category
+    await db.delete(categories).where(and(eq(categories.id, categoryId), eq(categories.workspaceId, workspaceId)));
+
+    revalidatePath("/dashboard");
+    return { success: true };
+}
+
 export async function getCategories(workspaceId: string) {
     const session = await auth()
     if (!session?.user?.id) throw new Error("Unauthorized")

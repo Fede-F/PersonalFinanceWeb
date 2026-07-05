@@ -132,11 +132,11 @@ export function TransactionModal({
             if (!v) reset()
         }}>
             <DialogTrigger asChild>
-                <Button size="sm" className="gap-2 bg-emerald-600 hover:bg-emerald-700">
+                <Button size="sm" className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white w-full max-w-[280px] sm:w-auto justify-center">
                     <Plus size={16} /> Nueva Transacción
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>Nueva Transacción</DialogTitle>
                     <DialogDescription>

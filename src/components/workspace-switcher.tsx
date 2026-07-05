@@ -71,16 +71,16 @@ export function WorkspaceSwitcher({ workspaces, currentWorkspaceId, currencies, 
                             role="combobox"
                             aria-expanded={open}
                             aria-label="Seleccionar workspace"
-                            className="w-auto min-w-[200px] max-w-[300px] justify-between px-3"
+                            className="w-auto min-w-[130px] sm:min-w-[200px] max-w-[220px] sm:max-w-[300px] justify-between px-2 sm:px-3 text-xs sm:text-sm h-8 sm:h-9"
                         >
-                            <div className="flex items-center gap-2 truncate mr-2">
-                                <LayoutDashboard className="h-4 w-4 text-emerald-500 shrink-0" />
+                            <div className="flex items-center gap-1.5 sm:gap-2 truncate mr-1 sm:mr-2">
+                                <LayoutDashboard className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-500 shrink-0" />
                                 <span className="truncate font-medium">{selectedWorkspace?.name}</span>
                                 {selectedWorkspace && selectedWorkspace.memberCount && selectedWorkspace.memberCount > 1 ? (
-                                    <Users className="h-3.5 w-3.5 text-zinc-400 shrink-0 ml-1" />
+                                    <Users className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-zinc-400 shrink-0 ml-0.5 sm:ml-1" />
                                 ) : null}
                             </div>
-                            <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+                            <ChevronsUpDown className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 opacity-50" />
                         </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
