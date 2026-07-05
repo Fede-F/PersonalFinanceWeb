@@ -21,7 +21,7 @@ export const proxy = auth((req) => {
 
 export default proxy
 
-
 export const config = {
-    matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+    // Excluir APIs, estáticos, imágenes, manifest, service worker e iconos de la protección del middleware
+    matcher: ["/((?!api|_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|icon-.*\\.png).*)"],
 }
