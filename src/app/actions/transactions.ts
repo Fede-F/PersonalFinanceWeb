@@ -351,21 +351,127 @@ export async function updateTransaction(
                 await adjustAccountBalance(targetTx.accountId, -oldAmount * oldFactor)
             }
 
-            await db.update(transactions)
-                .set({
-                    ...validatedData,
-                    amount: encryptAmount(validatedData.amount),
-                    exchangeRate,
-                    accountId: validatedData.accountId || null,
-                    categoryId: validatedData.categoryId || null,
-                    description: validatedData.description || null,
-                    updatedAt: new Date()
-                })
-                .where(eq(transactions.id, transactionId))
+            // Case A: If it was NOT installments, and now it IS installments:
+            if (validatedData.isInstallments && validatedData.installmentsCount && !targetTx.isInstallments) {
+                const newParentId = targetTx.id
+                
+                await db.update(transactions)
+                    .set({
+                        ...validatedData,
+                        amount: encryptAmount(validatedData.amount),
+                        exchangeRate,
+                        accountId: validatedData.accountId || null,
+                        categoryId: validatedData.categoryId || null,
+                        description: validatedData.description || null,
+                        parentId: newParentId,
+                        installmentNumber: 1,
+                        updatedAt: new Date()
+                    })
+                    .where(eq(transactions.id, transactionId))
 
-            if (validatedData.accountId) {
-                const newAmount = parseFloat(validatedData.amount) * parseFloat(exchangeRate)
-                await adjustAccountBalance(validatedData.accountId, newAmount * newFactor)
+                const rowsToInsert = []
+                const startDate = new Date(validatedData.date)
+                const totalInstallments = validatedData.installmentsCount
+
+                for (let i = 1; i < totalInstallments; i++) {
+                    const date = new Date(startDate)
+                    date.setMonth(startDate.getMonth() + i)
+
+                    rowsToInsert.push({
+                        ...validatedData,
+                        amount: encryptAmount(validatedData.amount),
+                        id: randomUUID(),
+                        parentId: newParentId,
+                        installmentNumber: i + 1,
+                        date,
+                        accountId: validatedData.accountId || null,
+                        categoryId: validatedData.categoryId || null,
+                        description: validatedData.description || null,
+                        exchangeRate,
+                        createdById: session.user.id,
+                    })
+                }
+
+                if (rowsToInsert.length > 0) {
+                    await db.insert(transactions).values(rowsToInsert)
+                }
+
+                if (validatedData.accountId) {
+                    const newAmount = parseFloat(validatedData.amount) * parseFloat(exchangeRate)
+                    // adjust for this transaction (already deducted oldAmount, so now add newAmount)
+                    await adjustAccountBalance(validatedData.accountId, newAmount * newFactor)
+                    // adjust for the other generated ones
+                    const totalAdjustment = newAmount * newFactor * (totalInstallments - 1)
+                    await adjustAccountBalance(validatedData.accountId, totalAdjustment)
+                }
+            } else if (validatedData.isFixed && !targetTx.isFixed) {
+                // If it was NOT fixed, and now it IS fixed:
+                const newParentId = targetTx.id
+                
+                await db.update(transactions)
+                    .set({
+                        ...validatedData,
+                        amount: encryptAmount(validatedData.amount),
+                        exchangeRate,
+                        accountId: validatedData.accountId || null,
+                        categoryId: validatedData.categoryId || null,
+                        description: validatedData.description || null,
+                        parentId: newParentId,
+                        installmentNumber: null,
+                        updatedAt: new Date()
+                    })
+                    .where(eq(transactions.id, transactionId))
+
+                const rowsToInsert = []
+                const startDate = new Date(validatedData.date)
+
+                for (let i = 1; i < 24; i++) {
+                    const date = new Date(startDate)
+                    date.setMonth(startDate.getMonth() + i)
+
+                    rowsToInsert.push({
+                        ...validatedData,
+                        amount: encryptAmount(validatedData.amount),
+                        id: randomUUID(),
+                        parentId: newParentId,
+                        installmentNumber: null,
+                        date,
+                        accountId: validatedData.accountId || null,
+                        categoryId: validatedData.categoryId || null,
+                        description: validatedData.description || null,
+                        exchangeRate,
+                        createdById: session.user.id,
+                    })
+                }
+
+                if (rowsToInsert.length > 0) {
+                    await db.insert(transactions).values(rowsToInsert)
+                }
+
+                if (validatedData.accountId) {
+                    const newAmount = parseFloat(validatedData.amount) * parseFloat(exchangeRate)
+                    await adjustAccountBalance(validatedData.accountId, newAmount * newFactor)
+                    const totalAdjustment = newAmount * newFactor * 23
+                    await adjustAccountBalance(validatedData.accountId, totalAdjustment)
+                }
+            } else {
+                // Normal single update
+                await db.update(transactions)
+                    .set({
+                        ...validatedData,
+                        amount: encryptAmount(validatedData.amount),
+                        exchangeRate,
+                        accountId: validatedData.accountId || null,
+                        categoryId: validatedData.categoryId || null,
+                        description: validatedData.description || null,
+                        updatedAt: new Date()
+                    })
+                    .where(eq(transactions.id, transactionId))
+
+                if (validatedData.accountId) {
+                    const newAmount = parseFloat(validatedData.amount) * parseFloat(exchangeRate)
+                    await adjustAccountBalance(validatedData.accountId, newAmount * newFactor)
+                }
             }
         } else {
             // Update this and all subsequent transactions in the group (parentId)
@@ -396,19 +502,23 @@ export async function updateTransaction(
                 }
             }
 
-            // If we transitioned to unchecking isInstallments:
-            if (!validatedData.isInstallments && targetTx.isInstallments) {
-                // Delete all subsequent ones
+            // Case B: Check if we are turning off recurrence (either from fixed to single, or from installments to single)
+            const turningOffFixed = !validatedData.isFixed && targetTx.isFixed;
+            const turningOffInstallments = !validatedData.isInstallments && targetTx.isInstallments;
+
+            if (turningOffFixed || turningOffInstallments) {
+                // Delete all subsequent ones (subsequentTxs includes targetTx, so we filter it out)
                 const idsToDelete = subsequentTxs.filter(t => t.id !== targetTx.id).map(t => t.id)
                 if (idsToDelete.length > 0) {
                     await db.delete(transactions).where(inArray(transactions.id, idsToDelete))
                 }
 
-                // Update only this transaction, setting isInstallments to false and installmentsCount to null
+                // Update only this transaction, setting isFixed, isInstallments, installmentsCount, installmentNumber, parentId to null/false
                 await db.update(transactions)
                     .set({
                         ...validatedData,
                         amount: encryptAmount(validatedData.amount),
+                        isFixed: false,
                         isInstallments: false,
                         installmentsCount: null,
                         installmentNumber: null,
@@ -425,8 +535,25 @@ export async function updateTransaction(
                     const newAmount = parseFloat(validatedData.amount) * parseFloat(exchangeRate)
                     await adjustAccountBalance(validatedData.accountId, newAmount * newFactor)
                 }
+
+                // If turning off installments, update previous installments count in the database to be the number of installments that remain
+                if (turningOffInstallments) {
+                    const remainingCount = (targetTx.installmentNumber || 1) - 1
+                    if (remainingCount > 0) {
+                        await db.update(transactions)
+                            .set({
+                                installmentsCount: remainingCount
+                            })
+                            .where(
+                                and(
+                                    eq(transactions.parentId, targetTx.parentId),
+                                    sql`${transactions.installmentNumber} <= ${remainingCount}`
+                                )
+                            )
+                    }
+                }
             }
-            // If it's installments and count changed:
+            // Case C: It's installments and count changed (or stays installments, but we might have changed count)
             else if (validatedData.isInstallments && validatedData.installmentsCount && targetTx.isInstallments) {
                 const newCount = validatedData.installmentsCount
                 const oldCount = targetTx.installmentsCount || 1
@@ -459,6 +586,7 @@ export async function updateTransaction(
                                 categoryId: validatedData.categoryId || null,
                                 description: validatedData.description || null,
                                 exchangeRate,
+                                createdById: session.user.id,
                             })
                         }
                         if (rowsToInsert.length > 0) {
@@ -476,7 +604,7 @@ export async function updateTransaction(
                     }
                 }
 
-                // Update all remaining subsequent ones with the common edits
+                // Update all remaining subsequent ones with the common edits (propagating dates)
                 const remainingSubsequent = await db
                     .select()
                     .from(transactions)
@@ -488,6 +616,10 @@ export async function updateTransaction(
                     )
 
                 for (const tx of remainingSubsequent) {
+                    const monthDiff = (tx.date.getFullYear() - targetTx.date.getFullYear()) * 12 + (tx.date.getMonth() - targetTx.date.getMonth())
+                    const newTxDate = new Date(validatedData.date)
+                    newTxDate.setMonth(validatedData.date.getMonth() + monthDiff)
+
                     await db.update(transactions)
                         .set({
                             concept: validatedData.concept,
@@ -496,6 +628,7 @@ export async function updateTransaction(
                             categoryId: validatedData.categoryId || null,
                             accountId: validatedData.accountId || null,
                             description: validatedData.description || null,
+                            date: newTxDate,
                             exchangeRate,
                             updatedAt: new Date()
                         })
@@ -507,8 +640,12 @@ export async function updateTransaction(
                     }
                 }
             } else {
-                // For other cases (e.g. fixed transaction edits)
+                // For other cases (e.g. fixed transaction edits, propagating dates)
                 for (const tx of subsequentTxs) {
+                    const monthDiff = (tx.date.getFullYear() - targetTx.date.getFullYear()) * 12 + (tx.date.getMonth() - targetTx.date.getMonth())
+                    const newTxDate = new Date(validatedData.date)
+                    newTxDate.setMonth(validatedData.date.getMonth() + monthDiff)
+
                     await db.update(transactions)
                         .set({
                             concept: validatedData.concept,
@@ -517,6 +654,7 @@ export async function updateTransaction(
                             categoryId: validatedData.categoryId || null,
                             accountId: validatedData.accountId || null,
                             description: validatedData.description || null,
+                            date: newTxDate,
                             exchangeRate,
                             updatedAt: new Date()
                         })

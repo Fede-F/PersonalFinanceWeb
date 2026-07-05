@@ -82,7 +82,7 @@ export default async function DashboardPage(props: {
 
     const { accounts, recentTransactions, categories, currencies, quickConcepts } = await getDashboardData(currentWorkspace.id, month, year)
 
-    const preferredCurrency = userData.defaultCurrency || currentWorkspace.baseCurrency
+    const preferredCurrency = currentWorkspace.baseCurrency
 
     // Fetch market rates and build dynamic latest rates map
     const allRates = await db.select().from(marketRates)
@@ -129,6 +129,27 @@ export default async function DashboardPage(props: {
             amountInPreferred: convertAmount(amountFloat, tx.currency, preferredCurrency),
             amountInUSD: convertAmount(amountFloat, tx.currency, "USD")
         }
+    })
+
+    const sortedTransactions = [...normalizedTransactions].sort((a, b) => {
+        const getGroup = (tx: any) => {
+            if (tx.isFixed && tx.type === 'INCOME') return 4;
+            if (tx.isFixed && tx.type === 'EXPENSE') return 3;
+            if (tx.type === 'EXPENSE' && tx.accountType === 'CREDIT_CARD') return 2;
+            return 1;
+        }
+
+        const groupA = getGroup(a);
+        const groupB = getGroup(b);
+
+        if (groupA !== groupB) {
+            return groupA - groupB;
+        }
+
+        const dateA = new Date(a.date).getTime();
+        const dateB = new Date(b.date).getTime();
+
+        return dateB - dateA;
     })
 
     // Sum using normalized preferred and USD amounts
@@ -268,7 +289,7 @@ export default async function DashboardPage(props: {
                             </div>
 
                             <ActivityList
-                                recentTransactions={normalizedTransactions.slice(0, 10)}
+                                recentTransactions={sortedTransactions}
                                 workspaceId={currentWorkspace.id}
                                 accounts={accounts}
                                 categories={categories}
@@ -360,7 +381,7 @@ export default async function DashboardPage(props: {
                         </div>
 
                         <ActivityList
-                            recentTransactions={normalizedTransactions.slice(0, 10)}
+                            recentTransactions={sortedTransactions}
                             workspaceId={currentWorkspace.id}
                             accounts={accounts}
                             categories={categories}

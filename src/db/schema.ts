@@ -130,6 +130,7 @@ export const categories = pgTable("categories", {
     icon: text("icon"), // Lucide icon name or emoji
     color: varchar("color", { length: 7 }), // Hex color
     type: varchar("type", { length: 20 }).notNull().default("EXPENSE"), // 'INCOME', 'EXPENSE', 'BOTH'
+    isActive: boolean("is_active").default(true).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

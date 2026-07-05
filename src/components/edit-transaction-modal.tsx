@@ -223,28 +223,26 @@ export function EditTransactionModal({
                             <Label htmlFor="isFixed" className="text-sm font-medium cursor-pointer select-none">
                                 Fijo
                             </Label>
-                            <div className="relative flex items-center">
-                                <button
-                                    type="button"
-                                    className="text-zinc-400 hover:text-zinc-600 focus:outline-none transition-colors"
-                                    onMouseEnter={() => setShowTooltip(true)}
-                                    onMouseLeave={() => setShowTooltip(false)}
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        setShowTooltip(!showTooltip);
-                                    }}
-                                >
-                                    <HelpCircle size={16} />
-                                </button>
-                                {showTooltip && (
-                                    <div className="absolute bottom-full left-1/2 z-50 mb-2 w-52 -translate-x-1/2 rounded-lg bg-zinc-950 p-2.5 text-[11px] leading-relaxed text-zinc-100 shadow-xl border border-zinc-800 transition-all duration-200">
-                                        Indica si es un gasto o ingreso fijo/recurrente (ej: Expensas, alquiler, abonos, sueldo).
-                                        <div className="absolute top-full left-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1 bg-zinc-950 border-r border-b border-zinc-800 rotate-45" />
-                                    </div>
-                                )}
-                            </div>
+                            <button
+                                type="button"
+                                className="text-zinc-400 hover:text-zinc-650 focus:outline-none transition-colors"
+                                onMouseEnter={() => setShowTooltip(true)}
+                                onMouseLeave={() => setShowTooltip(false)}
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    setShowTooltip(!showTooltip);
+                                }}
+                            >
+                                <HelpCircle size={16} />
+                            </button>
                         </div>
                     </div>
+
+                    {showTooltip && (
+                        <div className="p-2.5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg text-[11px] leading-relaxed text-zinc-550 dark:text-zinc-400 animate-in fade-in slide-in-from-top-1 duration-200">
+                            <strong>Operación Fija:</strong> Indica si es un gasto o ingreso recurrente (ej: expensas, alquiler, abonos, sueldo). Se replicará de manera automática.
+                        </div>
+                    )}
 
                     <div className="space-y-2">
                         <Label className={errors.concept ? "text-rose-500" : ""}>Concepto</Label>

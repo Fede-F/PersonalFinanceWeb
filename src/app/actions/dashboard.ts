@@ -154,6 +154,7 @@ export async function getDashboardData(workspaceId: string, month?: number, year
             accountId: transactions.accountId,
             categoryId: transactions.categoryId,
             accountName: financialAccounts.name,
+            accountType: financialAccounts.type,
             categoryName: categories.name,
             categoryColor: categories.color,
             categoryIcon: categories.icon,

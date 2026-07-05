@@ -31,13 +31,21 @@ export function encryptAmount(amount: string | number): string {
 export function decryptAmount(encryptedText: string | null | undefined): string {
   if (!encryptedText) return "0";
   
-  // If it's a legacy plain number/decimal, it won't contain a colon separating IV and ciphertext.
-  if (!encryptedText.includes(":")) {
+  // An encrypted text must be in the format "ivHex:encryptedHex"
+  // ivHex is 16 bytes = 32 hex characters
+  const parts = encryptedText.split(":");
+  if (parts.length !== 2) {
+    return encryptedText;
+  }
+  
+  const [ivHex, encryptedHex] = parts;
+  const hexRegex = /^[0-9a-fA-F]+$/;
+  
+  if (ivHex.length !== 32 || !hexRegex.test(ivHex) || !hexRegex.test(encryptedHex)) {
     return encryptedText;
   }
   
   try {
-    const [ivHex, encryptedHex] = encryptedText.split(":");
     const iv = Buffer.from(ivHex, "hex");
     const key = getEncryptionKey();
     const decipher = crypto.createDecipheriv("aes-256-cbc", key, iv);
@@ -47,7 +55,7 @@ export function decryptAmount(encryptedText: string | null | undefined): string 
     
     return decrypted;
   } catch (error) {
-    console.error("Failed to decrypt amount:", error);
+    console.warn("Failed to decrypt amount: Key mismatch or bad ciphertext format.");
     return "0";
   }
 }

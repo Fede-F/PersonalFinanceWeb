@@ -101,7 +101,7 @@ export function ConceptSelector({ quickConcepts, defaultValue, onChange }: Conce
           <p className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider">
             Sugerencias rápidas
           </p>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-1.5 max-h-[64px] overflow-hidden">
             {concepts.map((concept) => (
               <div key={concept} className="inline-flex items-center gap-1">
                 <Button

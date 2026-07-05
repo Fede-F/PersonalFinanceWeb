@@ -3,7 +3,7 @@
 import { auth } from "@/auth"
 import { db } from "@/db"
 import { categories, workspaceMembers } from "@/db/schema"
-import { eq, and } from "drizzle-orm"
+import { eq, and, sql } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 
 export async function createCategory(formData: FormData) {
@@ -25,12 +25,45 @@ export async function createCategory(formData: FormData) {
 
     if (!membership) throw new Error("Not a member of this workspace")
 
+    // Check if the category already exists in this workspace (case-insensitive)
+    const [existingCategory] = await db
+        .select()
+        .from(categories)
+        .where(
+            and(
+                eq(categories.workspaceId, workspaceId),
+                sql`lower(${categories.name}) = lower(${name})`
+            )
+        )
+
+    if (existingCategory) {
+        if (!existingCategory.isActive) {
+            // Reactivate soft-deleted category
+            const [reactivatedCategory] = await db
+                .update(categories)
+                .set({
+                    isActive: true,
+                    icon,
+                    color,
+                    type,
+                    updatedAt: new Date()
+                })
+                .where(eq(categories.id, existingCategory.id))
+                .returning()
+            
+            revalidatePath("/dashboard")
+            return reactivatedCategory
+        }
+        return existingCategory
+    }
+
     const [newCategory] = await db.insert(categories).values({
         workspaceId,
         name,
         icon,
         color,
         type,
+        isActive: true,
     }).returning()
 
     revalidatePath("/dashboard")
@@ -54,8 +87,10 @@ export async function deleteCategory(formData: FormData) {
 
     if (!membership) throw new Error("Not a member of this workspace");
 
-    // Delete category
-    await db.delete(categories).where(and(eq(categories.id, categoryId), eq(categories.workspaceId, workspaceId)));
+    // Soft delete category
+    await db.update(categories)
+        .set({ isActive: false, updatedAt: new Date() })
+        .where(and(eq(categories.id, categoryId), eq(categories.workspaceId, workspaceId)));
 
     revalidatePath("/dashboard");
     return { success: true };
@@ -68,5 +103,10 @@ export async function getCategories(workspaceId: string) {
     return db
         .select()
         .from(categories)
-        .where(eq(categories.workspaceId, workspaceId))
+        .where(
+            and(
+                eq(categories.workspaceId, workspaceId),
+                eq(categories.isActive, true)
+            )
+        )
 }

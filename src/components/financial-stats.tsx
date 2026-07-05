@@ -37,9 +37,9 @@ export function ExpensesDistribution({ transactions, preferredCurrency }: StatsP
     const strokeDasharrayInstallments = `${installmentPct} ${100 - installmentPct}`
     const strokeDasharrayNormal = `${normalPct} ${100 - normalPct}`
 
-    const offsetFixed = 100 - fixedPct + 25 // start from top (25)
-    const offsetInstallments = 100 - fixedPct - installmentPct + 25
-    const offsetNormal = 100 - fixedPct - installmentPct - normalPct + 25
+    const offsetNormal = circumference
+    const offsetInstallments = circumference - normalPct
+    const offsetFixed = circumference - normalPct - installmentPct
 
     return (
         <Card className="w-full border-none shadow-sm overflow-hidden bg-white dark:bg-zinc-900/50 backdrop-blur-sm p-0">

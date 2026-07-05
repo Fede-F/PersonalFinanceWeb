@@ -29,12 +29,13 @@ export const MobileExpenseDonut: React.FC<ExpenseDonutProps> = ({
   // plenty of room inside the 42×42 viewBox
   const radius = 14;
   const sw = 4; // thinner stroke so the centre stays open
-  const strokeDasharrayFixed = `${fixedPct} ${100 - fixedPct}`;
-  const strokeDasharrayInstallments = `${installmentPct} ${100 - installmentPct}`;
-  const strokeDasharrayNormal = `${normalPct} ${100 - normalPct}`;
-  const offsetFixed = 100 - fixedPct + 25;
-  const offsetInstallments = 100 - fixedPct - installmentPct + 25;
-  const offsetNormal = 100 - fixedPct - installmentPct - normalPct + 25;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDasharrayFixed = `${(fixedPct * circumference) / 100} ${circumference - (fixedPct * circumference) / 100}`;
+  const strokeDasharrayInstallments = `${(installmentPct * circumference) / 100} ${circumference - (installmentPct * circumference) / 100}`;
+  const strokeDasharrayNormal = `${(normalPct * circumference) / 100} ${circumference - (normalPct * circumference) / 100}`;
+  const offsetNormal = circumference;
+  const offsetInstallments = circumference - (normalPct * circumference) / 100;
+  const offsetFixed = circumference - ((normalPct + installmentPct) * circumference) / 100;
 
   return (
     <div className="flex items-center gap-3 mt-2">
