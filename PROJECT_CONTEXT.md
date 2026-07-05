@@ -5,7 +5,7 @@ Una aplicación web de finanzas personales escalable y colaborativa.
 - **Core Value:** Gestión financiera multi-tenant basada en "Workspaces" (Hogares/Grupos).
 - **Enfoque:** API-first, Mobile-first (PWA), diseñada para automatización (n8n ready).
 - **Roadmap & Estado Actual:**
-    - [x] **Fase 1: Core de Gastos y Multimoneda** (Completado: registros fijos/en cuotas, estadísticas SVG, API de cotizaciones en background, Modo Oscuro persistente, y edición/eliminación de workspaces).
+    - [x] **Fase 1: Core de Gastos y Multimoneda** (Completado: registros fijos/en cuotas, estadísticas SVG, API de cotizaciones en background, Modo Oscuro persistente, edición/eliminación de workspaces y configuración base PWA instalable en Android/iOS/Escritorio con Service Worker).
     - [ ] **Gestión de Miembros en el Workspace** (FOCUS ACTUAL: Interfaz visual para invitar, ver y remover miembros colaboradores).
     - [ ] **Fase 2: Gestión Activa de Cuentas e Inversiones** (Seguimiento de portafolios, cuentas de bancos y activos).
     - [ ] **Fase 3: Inteligencia Financiera y Metas** (Comparativas de rendimiento vs. mes pasado, Cash Flow y presupuestos).
@@ -18,6 +18,8 @@ Una aplicación web de finanzas personales escalable y colaborativa.
 - **ORM:** Drizzle ORM (con Migrations).
 - **Auth:** NextAuth.js v5 (Auth.js).
 - **State Management:** React Server Components (Server State) + Zustand (Client State si es necesario).
+- **PWA Support:** Service Worker nativo personalizado (`public/sw.js`), Manifiesto dinámico de Next.js (`src/app/manifest.ts`) e iconos optimizados.
+
 
 ## 4. Documentación Secundaria
 - [🛠️ Estándares de Desarrollo](CODING_STANDARDS.md): Reglas de arquitectura, naming y lógica.
