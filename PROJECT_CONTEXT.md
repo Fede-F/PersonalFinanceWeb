@@ -24,6 +24,8 @@ Una aplicación web de finanzas personales escalable y colaborativa.
 ## 4. Documentación Secundaria
 - [🛠️ Estándares de Desarrollo](CODING_STANDARDS.md): Reglas de arquitectura, naming y lógica.
 - [🚀 Plan de Evolución Dashboard](documentation/dashboard_evolution_plan.md): Próximos pasos (Contexto mensual, Flujo de caja, Inversiones).
+- [📱 Configuración PWA](documentation/pwa_setup.md): Detalles sobre la instalación móvil, manifiesto, Service Worker y comportamiento offline.
+
 
 ## 5. Architecture & Patterns
 - **Database-per-Schema:** NO. Usamos base de datos compartida.
