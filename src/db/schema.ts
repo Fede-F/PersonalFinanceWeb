@@ -157,6 +157,15 @@ export const transactions = pgTable("transactions", {
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const conceptBlacklist = pgTable("concept_blacklist", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    concept: text("concept").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+    uniqueWorkspaceConcept: unique().on(t.workspaceId, t.concept),
+}));
+
 
 export const accountsRelations = relations(accounts, ({ one }) => ({
     user: one(users, {
@@ -192,6 +201,14 @@ export const workspaceRelations = relations(workspaces, ({ one, many }) => ({
     financialAccounts: many(financialAccounts),
     categories: many(categories),
     transactions: many(transactions),
+    conceptBlacklist: many(conceptBlacklist),
+}));
+
+export const conceptBlacklistRelations = relations(conceptBlacklist, ({ one }) => ({
+    workspace: one(workspaces, {
+        fields: [conceptBlacklist.workspaceId],
+        references: [workspaces.id],
+    }),
 }));
 
 export const workspaceMemberRelations = relations(workspaceMembers, ({ one }) => ({

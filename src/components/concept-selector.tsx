@@ -15,8 +15,10 @@ import {
   DialogClose,
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
+import { blacklistConcept } from "@/app/actions/concepts"
 
 interface ConceptSelectorProps {
+  workspaceId: string
   quickConcepts: string[]
   defaultValue?: string
   onChange?: (value: string) => void
@@ -30,7 +32,7 @@ function useQuickConcepts(initial: string[]) {
   return { items, remove, add, setItems }
 }
 
-export function ConceptSelector({ quickConcepts, defaultValue, onChange }: ConceptSelectorProps) {
+export function ConceptSelector({ workspaceId, quickConcepts, defaultValue, onChange }: ConceptSelectorProps) {
   const { items: concepts, remove: removeConcept, setItems: setConcepts } = useQuickConcepts(quickConcepts)
 
   const selectRef = React.useRef<HTMLSelectElement>(null)
@@ -40,10 +42,16 @@ export function ConceptSelector({ quickConcepts, defaultValue, onChange }: Conce
   const [deleteTarget, setDeleteTarget] = React.useState<string | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false)
 
-  const handleDeleteConcept = () => {
+  const handleDeleteConcept = async () => {
     if (deleteTarget) {
-      removeConcept(deleteTarget)
-      toast.success(`Concepto "${deleteTarget}" eliminado`)
+      try {
+        removeConcept(deleteTarget)
+        await blacklistConcept(workspaceId, deleteTarget)
+        toast.success(`Concepto "${deleteTarget}" eliminado y excluido`)
+      } catch (error) {
+        console.error(error)
+        toast.error("Error al excluir el concepto")
+      }
     }
     setDeleteDialogOpen(false)
     setDeleteTarget(null)
@@ -52,11 +60,13 @@ export function ConceptSelector({ quickConcepts, defaultValue, onChange }: Conce
   React.useEffect(() => {
     if (!selectRef.current) return
 
+    const uniqueOptions = Array.from(new Set(defaultValue ? [defaultValue, ...concepts] : concepts))
+
     const ts = new TomSelect(selectRef.current, {
       create: true,
       maxItems: 1,
       placeholder: "Ej. Almuerzo, Nafta, Starbucks...",
-      options: concepts.map(c => ({ value: c, text: c })),
+      options: uniqueOptions.map(c => ({ value: c, text: c })),
       items: defaultValue ? [defaultValue] : [],
       onInitialize: function () {
         if (defaultValue) {

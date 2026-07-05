@@ -14,38 +14,69 @@ export function ExpensesDistribution({ transactions, preferredCurrency }: StatsP
     const expenses = transactions.filter(t => t.type === "EXPENSE")
     const totalExpenses = expenses.reduce((acc, t) => acc + t.amountInPreferred, 0)
 
-    const fixedExpenses = expenses
-        .filter(t => t.isFixed)
-        .reduce((acc, t) => acc + t.amountInPreferred, 0)
+    // Group by category
+    const categoryMap: { [id: string]: { name: string; amount: number; color: string } } = {}
+    expenses.forEach(t => {
+        const catId = t.categoryId || "uncategorized"
+        const name = t.categoryName || "Sin categoría"
+        const color = t.categoryColor || "#a1a1aa"
+        
+        if (!categoryMap[catId]) {
+            categoryMap[catId] = {
+                name,
+                amount: 0,
+                color
+            }
+        }
+        categoryMap[catId].amount += t.amountInPreferred
+    })
 
-    const installmentExpenses = expenses
-        .filter(t => t.isInstallments)
-        .reduce((acc, t) => acc + t.amountInPreferred, 0)
+    // Sort by amount descending
+    const allCategories = Object.values(categoryMap).sort((a, b) => b.amount - a.amount)
 
-    const normalExpenses = totalExpenses - fixedExpenses - installmentExpenses
+    // Limit to top 5 categories and group the rest into "Otros"
+    const maxMainCategories = 5
+    let mainCategories = allCategories
+    let otherCategoriesAmount = 0
+    
+    if (allCategories.length > maxMainCategories) {
+        mainCategories = allCategories.slice(0, maxMainCategories - 1)
+        otherCategoriesAmount = allCategories.slice(maxMainCategories - 1).reduce((sum, c) => sum + c.amount, 0)
+        if (otherCategoriesAmount > 0) {
+            mainCategories.push({
+                name: "Otros",
+                amount: otherCategoriesAmount,
+                color: "#71717a"
+            })
+        }
+    }
 
-    // Percentages
-    const fixedPct = totalExpenses > 0 ? (fixedExpenses / totalExpenses) * 100 : 0
-    const installmentPct = totalExpenses > 0 ? (installmentExpenses / totalExpenses) * 100 : 0
-    const normalPct = totalExpenses > 0 ? (normalExpenses / totalExpenses) * 100 : 0
+    // Compute percentages
+    const categoriesWithPct = mainCategories.map(cat => ({
+        ...cat,
+        pct: totalExpenses > 0 ? (cat.amount / totalExpenses) * 100 : 0
+    }))
 
     // SVG Donut Calculations
     const radius = 15.91549430918954
     const circumference = 2 * Math.PI * radius // 100
 
-    const strokeDasharrayFixed = `${fixedPct} ${100 - fixedPct}`
-    const strokeDasharrayInstallments = `${installmentPct} ${100 - installmentPct}`
-    const strokeDasharrayNormal = `${normalPct} ${100 - normalPct}`
-
-    const offsetNormal = circumference
-    const offsetInstallments = circumference - normalPct
-    const offsetFixed = circumference - normalPct - installmentPct
+    let accumulatedPct = 0
+    const segments = categoriesWithPct.map(cat => {
+        const offset = circumference - accumulatedPct
+        accumulatedPct += cat.pct
+        return {
+            ...cat,
+            offset,
+            strokeDasharray: `${cat.pct} ${100 - cat.pct}`
+        }
+    })
 
     return (
         <Card className="w-full border-none shadow-sm overflow-hidden bg-white dark:bg-zinc-900/50 backdrop-blur-sm p-0">
             <CardHeader className="p-4 sm:p-6 pb-2">
                 <CardTitle className="text-base sm:text-lg xl:text-xl font-bold tracking-tight">Distribución de Gastos</CardTitle>
-                <CardDescription className="text-xs sm:text-sm">Gastos fijos, en cuotas y discrecionales del mes</CardDescription>
+                <CardDescription className="text-xs sm:text-sm">Distribución de gastos por categoría en este mes</CardDescription>
             </CardHeader>
             <CardContent className="p-4 sm:p-6 pt-0 sm:pt-2">
                 <div className="flex flex-col items-center justify-center gap-6">
@@ -74,48 +105,23 @@ export function ExpensesDistribution({ transactions, preferredCurrency }: StatsP
                                     strokeWidth="4"
                                     className="dark:stroke-zinc-800/30"
                                 />
-                                {normalPct > 0 && (
-                                    <circle
-                                        cx="21"
-                                        cy="21"
-                                        r={radius}
-                                        fill="transparent"
-                                        stroke="#a1a1aa"
-                                        strokeWidth="4.5"
-                                        strokeDasharray={strokeDasharrayNormal}
-                                        strokeDashoffset={offsetNormal}
-                                        strokeLinecap="round"
-                                        className="transition-all duration-500 ease-out"
-                                    />
-                                )}
-                                {installmentPct > 0 && (
-                                    <circle
-                                        cx="21"
-                                        cy="21"
-                                        r={radius}
-                                        fill="transparent"
-                                        stroke="#6366f1"
-                                        strokeWidth="4.5"
-                                        strokeDasharray={strokeDasharrayInstallments}
-                                        strokeDashoffset={offsetInstallments}
-                                        strokeLinecap="round"
-                                        className="transition-all duration-500 ease-out"
-                                    />
-                                )}
-                                {fixedPct > 0 && (
-                                    <circle
-                                        cx="21"
-                                        cy="21"
-                                        r={radius}
-                                        fill="transparent"
-                                        stroke="#10b981"
-                                        strokeWidth="4.5"
-                                        strokeDasharray={strokeDasharrayFixed}
-                                        strokeDashoffset={offsetFixed}
-                                        strokeLinecap="round"
-                                        className="transition-all duration-500 ease-out"
-                                    />
-                                )}
+                                {segments.map((seg, idx) => (
+                                    seg.pct > 0 && (
+                                        <circle
+                                            key={idx}
+                                            cx="21"
+                                            cy="21"
+                                            r={radius}
+                                            fill="transparent"
+                                            stroke={seg.color}
+                                            strokeWidth="4.5"
+                                            strokeDasharray={seg.strokeDasharray}
+                                            strokeDashoffset={seg.offset}
+                                            strokeLinecap="round"
+                                            className="transition-all duration-500 ease-out"
+                                        />
+                                    )
+                                ))}
                             </svg>
                         )}
 
@@ -129,56 +135,22 @@ export function ExpensesDistribution({ transactions, preferredCurrency }: StatsP
 
                     {/* Interactive Legend list */}
                     <div className="flex-1 w-full space-y-2 sm:space-y-3 lg:space-y-2 xl:space-y-3 max-w-sm">
-                        {/* Fijos */}
-                        <div className="flex items-center justify-between p-2 sm:p-3 rounded-lg sm:rounded-xl border border-zinc-100 dark:border-zinc-800/40 hover:bg-zinc-50 dark:hover:bg-zinc-800/20 transition-colors">
-                            <div className="flex items-center gap-2 sm:gap-3">
-                                <div className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded bg-emerald-500 shadow-sm" />
-                                <div>
-                                    <p className="text-xs sm:text-sm xl:text-base font-bold text-zinc-700 dark:text-zinc-300 leading-tight">Gastos Fijos</p>
-                                    <p className="text-[10px] sm:text-xs xl:text-sm text-zinc-400 leading-none mt-0.5">Alquiler, expensas, abonos...</p>
+                        {segments.map((seg, idx) => (
+                            <div key={idx} className="flex items-center justify-between p-2 sm:p-3 rounded-lg sm:rounded-xl border border-zinc-100 dark:border-zinc-800/40 hover:bg-zinc-50 dark:hover:bg-zinc-800/20 transition-colors">
+                                <div className="flex items-center gap-2 sm:gap-3">
+                                    <div className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded shadow-sm" style={{ backgroundColor: seg.color }} />
+                                    <div>
+                                        <p className="text-xs sm:text-sm xl:text-base font-bold text-zinc-700 dark:text-zinc-300 leading-tight">{seg.name}</p>
+                                    </div>
+                                </div>
+                                <div className="text-right" suppressHydrationWarning>
+                                    <p className="text-xs sm:text-sm xl:text-base font-extrabold text-zinc-900 dark:text-zinc-100 tabular-nums">
+                                        {preferredCurrency} {seg.amount.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                    </p>
+                                    <p className="text-[11px] xl:text-xs font-bold" style={{ color: seg.color }}>{seg.pct.toFixed(0)}%</p>
                                 </div>
                             </div>
-                            <div className="text-right" suppressHydrationWarning>
-                                <p className="text-xs sm:text-sm xl:text-base font-extrabold text-zinc-900 dark:text-zinc-100 tabular-nums">
-                                    {preferredCurrency} {fixedExpenses.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                                </p>
-                                <p className="text-[11px] xl:text-xs font-bold text-emerald-600 dark:text-emerald-400">{fixedPct.toFixed(0)}%</p>
-                            </div>
-                        </div>
-
-                        {/* En Cuotas */}
-                        <div className="flex items-center justify-between p-2 sm:p-3 rounded-lg sm:rounded-xl border border-zinc-100 dark:border-zinc-800/40 hover:bg-zinc-50 dark:hover:bg-zinc-800/20 transition-colors">
-                            <div className="flex items-center gap-2 sm:gap-3">
-                                <div className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded bg-indigo-500 shadow-sm" />
-                                <div>
-                                    <p className="text-xs sm:text-sm xl:text-base font-bold text-zinc-700 dark:text-zinc-300 leading-tight">En Cuotas</p>
-                                    <p className="text-[10px] sm:text-xs xl:text-sm text-zinc-400 leading-none mt-0.5">Tarjetas, pagos financiados</p>
-                                </div>
-                            </div>
-                            <div className="text-right" suppressHydrationWarning>
-                                <p className="text-xs sm:text-sm xl:text-base font-extrabold text-zinc-900 dark:text-zinc-100 tabular-nums">
-                                    {preferredCurrency} {installmentExpenses.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                                </p>
-                                <p className="text-[11px] xl:text-xs font-bold text-indigo-600 dark:text-indigo-400">{installmentPct.toFixed(0)}%</p>
-                            </div>
-                        </div>
-
-                        {/* Comunes */}
-                        <div className="flex items-center justify-between p-2 sm:p-3 rounded-lg sm:rounded-xl border border-zinc-100 dark:border-zinc-800/40 hover:bg-zinc-50 dark:hover:bg-zinc-800/20 transition-colors">
-                            <div className="flex items-center gap-2 sm:gap-3">
-                                <div className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded bg-zinc-400 shadow-sm" />
-                                <div>
-                                    <p className="text-xs sm:text-sm xl:text-base font-bold text-zinc-700 dark:text-zinc-300 leading-tight">Gastos Comunes</p>
-                                    <p className="text-[10px] sm:text-xs xl:text-sm text-zinc-400 leading-none mt-0.5">Almuerzos, ocio, salidas...</p>
-                                </div>
-                            </div>
-                            <div className="text-right" suppressHydrationWarning>
-                                <p className="text-xs sm:text-sm xl:text-base font-extrabold text-zinc-900 dark:text-zinc-100 tabular-nums">
-                                    {preferredCurrency} {normalExpenses.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                                </p>
-                                <p className="text-[11px] xl:text-xs font-bold text-zinc-500">{normalPct.toFixed(0)}%</p>
-                            </div>
-                        </div>
+                        ))}
                     </div>
                 </div>
             </CardContent>

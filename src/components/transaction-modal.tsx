@@ -198,6 +198,7 @@ export function TransactionModal({
                     <div className="space-y-2">
                         <Label className={errors.concept ? "text-rose-500" : ""}>Concepto</Label>
                         <ConceptSelector
+                            workspaceId={workspaceId}
                             quickConcepts={quickConcepts}
                             onChange={onConceptChange}
                         />

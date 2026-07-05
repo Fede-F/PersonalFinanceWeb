@@ -78,6 +78,15 @@ export function EditTransactionModal({
         resolver: zodResolver(transactionSchema) as any,
     })
 
+    const categoriesForSelector = [...categories]
+    if (transaction?.categoryId && !categoriesForSelector.some(c => c.id === transaction.categoryId)) {
+        categoriesForSelector.push({
+            id: transaction.categoryId,
+            name: transaction.categoryName || "Categoría inactiva",
+            color: transaction.categoryColor || "#a1a1aa",
+        })
+    }
+
     // Sincronizar campos personalizados manualmente
     const onConceptChange = (val: string) => setValue("concept", val, { shouldValidate: true })
     const onCategoryChange = (val: string) => setValue("categoryId", val, { shouldValidate: true })
@@ -247,6 +256,7 @@ export function EditTransactionModal({
                     <div className="space-y-2">
                         <Label className={errors.concept ? "text-rose-500" : ""}>Concepto</Label>
                         <ConceptSelector
+                            workspaceId={workspaceId}
                             quickConcepts={quickConcepts}
                             onChange={onConceptChange}
                             defaultValue={watch("concept")}
@@ -258,7 +268,7 @@ export function EditTransactionModal({
                         <Label className={errors.categoryId ? "text-rose-500" : ""}>Categoría</Label>
                         <CategorySelector
                             workspaceId={workspaceId}
-                            categories={categories}
+                            categories={categoriesForSelector}
                             onChange={onCategoryChange}
                             defaultValue={watch("categoryId")}
                         />

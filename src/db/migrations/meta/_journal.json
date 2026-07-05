@@ -22,6 +22,13 @@
       "when": 1770505269075,
       "tag": "0002_aspiring_night_thrasher",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1783282911397,
+      "tag": "0003_stiff_human_torch",
+      "breakpoints": true
     }
   ]
 }

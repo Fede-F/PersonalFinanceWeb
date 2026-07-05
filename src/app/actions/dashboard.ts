@@ -116,7 +116,12 @@ export async function getDashboardData(workspaceId: string, month?: number, year
     const categoriesList = await db
         .select()
         .from(categories)
-        .where(eq(categories.workspaceId, workspaceId))
+        .where(
+            and(
+                eq(categories.workspaceId, workspaceId),
+                eq(categories.isActive, true)
+            )
+        )
 
     const currenciesList = await db
         .select()
@@ -129,7 +134,12 @@ export async function getDashboardData(workspaceId: string, month?: number, year
             count: sql<number>`count(*)`,
         })
         .from(transactions)
-        .where(eq(transactions.workspaceId, workspaceId))
+        .where(
+            and(
+                eq(transactions.workspaceId, workspaceId),
+                sql`${transactions.concept} not in (select concept from concept_blacklist where workspace_id = ${workspaceId})`
+            )
+        )
         .groupBy(transactions.concept)
         .having(sql`length(${transactions.concept}) < 30`)
         .orderBy(desc(sql`count(*)`))

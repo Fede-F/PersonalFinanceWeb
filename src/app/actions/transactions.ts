@@ -3,7 +3,7 @@
 import { randomUUID } from "crypto"
 import { auth } from "@/auth"
 import { db } from "@/db"
-import { transactions, financialAccounts, workspaceMembers, marketRates, workspaces } from "@/db/schema"
+import { transactions, financialAccounts, workspaceMembers, marketRates, workspaces, conceptBlacklist } from "@/db/schema"
 import { eq, and, desc, inArray, gte, sql } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { transactionSchema } from "@/lib/validations"
@@ -178,6 +178,15 @@ export async function createTransaction(formData: FormData) {
                 .set({ balance: newBalance.toFixed(2), updatedAt: new Date() })
                 .where(eq(financialAccounts.id, validatedData.accountId))
         }
+
+        // If the concept was blacklisted, remove it from the blacklist to restore it to suggestions
+        await db.delete(conceptBlacklist)
+            .where(
+                and(
+                    eq(conceptBlacklist.workspaceId, validatedData.workspaceId),
+                    sql`lower(${conceptBlacklist.concept}) = lower(${validatedData.concept.trim()})`
+                )
+            )
 
         revalidatePath("/dashboard")
         return { success: true, data: insertedTransactions[0] }
@@ -667,6 +676,15 @@ export async function updateTransaction(
                 }
             }
         }
+
+        // If the concept was blacklisted, remove it from the blacklist to restore it to suggestions
+        await db.delete(conceptBlacklist)
+            .where(
+                and(
+                    eq(conceptBlacklist.workspaceId, validatedData.workspaceId),
+                    sql`lower(${conceptBlacklist.concept}) = lower(${validatedData.concept.trim()})`
+                )
+            )
 
         revalidatePath("/dashboard")
         return { success: true }

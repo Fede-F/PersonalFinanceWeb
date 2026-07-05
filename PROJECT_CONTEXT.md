@@ -61,6 +61,7 @@ Una aplicación web de finanzas personales escalable y colaborativa.
 - `workspace_members`: workspace_id, user_id, role (OWNER, EDITOR, VIEWER), permissions (JSONB).
 - `accounts`: id, workspace_id, name, type (CASH, BANK), currency, balance.
 - `categories`: id, workspace_id, name, icon, color.
+- `concept_blacklist`: id, workspace_id, concept, created_at (Unique constraint on workspace_id + concept).
 - `transactions`:
     - id, workspace_id, account_id (OPTIONAL - Phase 1), category_id (OPTIONAL).
     - type (INCOME, EXPENSE, TRANSFER).

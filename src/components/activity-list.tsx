@@ -83,40 +83,43 @@ export function ActivityList({
                             <p>No hay transacciones en este período.</p>
                         </div>
                     ) : (
-                        recentTransactions.map((tx) => (
-                            <div key={tx.id} className="p-4 flex items-center gap-4 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors group">
+                        recentTransactions.map((tx) => (                            
+                            <div key={tx.id} className="p-4 flex items-start sm:items-center gap-3 sm:gap-4 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors group">
                                 <div className={cn(
-                                    "w-12 h-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-105 shadow-sm",
+                                    "w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center transition-transform group-hover:scale-105 shadow-sm shrink-0",
                                     tx.type === 'INCOME' ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10" :
                                     tx.type === 'EXPENSE' ? "bg-rose-50 text-rose-600 dark:bg-rose-500/10" :
                                     "bg-zinc-100 text-zinc-600 dark:bg-zinc-800"
                                 )}>
-                                    {tx.type === 'INCOME' ? <Plus size={20} /> :
-                                     tx.type === 'EXPENSE' ? <ArrowDownLeft size={20} /> :
-                                     <ArrowRightLeft size={20} />}
+                                    {tx.type === 'INCOME' ? <Plus className="w-5 h-5 sm:w-6 sm:h-6" /> :
+                                     tx.type === 'EXPENSE' ? <ArrowDownLeft className="w-5 h-5 sm:w-6 sm:h-6" /> :
+                                     <ArrowRightLeft className="w-5 h-5 sm:w-6 sm:h-6" />}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <div className="flex flex-wrap items-center gap-2 mb-0.5">
-                                        <p className="font-bold text-zinc-900 dark:text-zinc-100 truncate">{tx.concept}</p>
+                                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mb-0.5">
+                                        <p className="font-bold text-sm sm:text-base text-zinc-900 dark:text-zinc-100 truncate">{tx.concept}</p>
                                         {tx.isFixed && (
-                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
+                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 shrink-0">
                                                 Fijo
                                             </span>
                                         )}
                                         {tx.isInstallments && tx.installmentNumber && tx.installmentsCount && (
-                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20">
+                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 shrink-0">
                                                 Cuota {tx.installmentNumber}/{tx.installmentsCount}
                                             </span>
                                         )}
                                     </div>
-                                    <div className="flex items-center gap-2 text-zinc-500 text-sm flex-wrap">
-                                        <span suppressHydrationWarning className="flex items-center gap-1"><CalendarIcon size={12} /> {format(new Date(tx.date), "dd MMM", { locale: es })}</span>
-                                        <span className="opacity-30">•</span>
-                                        <span className="flex items-center gap-1 font-medium">{tx.categoryName || "Gral."}</span>
+                                    <div className="flex items-center gap-x-1.5 gap-y-0.5 text-zinc-500 text-[10px] sm:text-xs flex-wrap mt-0.5 leading-none">
+                                        <span suppressHydrationWarning className="flex items-center gap-1 shrink-0"><CalendarIcon className="w-3 h-3 opacity-60" /> {format(new Date(tx.date), "dd MMM", { locale: es })}</span>
+                                        <span className="opacity-30 shrink-0">•</span>
+                                        <span className="flex items-center gap-1 shrink-0 font-medium">
+                                            <span className="w-1.5 h-1.5 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: tx.categoryColor || "#a1a1aa" }} />
+                                            {tx.categoryName || "Gral."}
+                                        </span>
                                         {isShared && tx.creatorName && (
                                             <>
-                                                <span className="opacity-30">•</span>
-                                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/60 max-w-[125px] truncate select-none">
+                                                <span className="opacity-30 shrink-0">•</span>
+                                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/60 max-w-[125px] truncate select-none shrink-0">
                                                     <span className={cn(
                                                         "h-3.5 w-3.5 rounded-full text-[8px] font-extrabold flex items-center justify-center text-white shrink-0",
                                                         getAvatarBgColor(tx.creatorName)
@@ -129,10 +132,10 @@ export function ActivityList({
                                         )}
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-start gap-2 sm:gap-3 shrink-0">
                                     <div className="text-right" suppressHydrationWarning>
                                         <p className={cn(
-                                            "font-black text-lg tabular-nums",
+                                            "font-black text-sm sm:text-lg tabular-nums leading-none",
                                             tx.type === 'INCOME' ? "text-emerald-600" :
                                             tx.type === 'EXPENSE' ? "text-rose-600" :
                                             "text-zinc-900 dark:text-zinc-100"
@@ -140,12 +143,12 @@ export function ActivityList({
                                             {tx.type === 'INCOME' ? '+' : '-'}{tx.currency} {parseFloat(tx.amount).toLocaleString("es-AR")}
                                         </p>
                                         {tx.currency !== preferredCurrency && (
-                                            <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-tighter">
+                                            <p className="text-[9px] sm:text-[10px] text-zinc-400 font-bold uppercase tracking-tighter mt-1 leading-none">
                                                 ≈ {preferredCurrency} {tx.amountInPreferred.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                                             </p>
                                         )}
                                         {tx.currency !== "USD" && preferredCurrency !== "USD" && (
-                                            <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-tighter mt-0.5">
+                                            <p className="text-[9px] sm:text-[10px] text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-tighter mt-1 leading-none">
                                                 ≈ USD {tx.amountInUSD.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                                             </p>
                                         )}

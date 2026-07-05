@@ -29,19 +29,43 @@ export function MobileStatsCarousel({ transactions, preferredCurrency }: MobileS
     const savingsRate = totalIncome > 0 ? (netSavings / totalIncome) * 100 : 0
 
     // --- Calculations for Distribución de Gastos ---
-    const fixedExpenses = expenses
-        .filter(t => t.isFixed)
-        .reduce((acc, t) => acc + t.amountInPreferred, 0)
+    const categoryMap: { [id: string]: { name: string; amount: number; color: string } } = {}
+    expenses.forEach(t => {
+        const catId = t.categoryId || "uncategorized"
+        const name = t.categoryName || "Sin categoría"
+        const color = t.categoryColor || "#a1a1aa"
+        
+        if (!categoryMap[catId]) {
+            categoryMap[catId] = {
+                name,
+                amount: 0,
+                color
+            }
+        }
+        categoryMap[catId].amount += t.amountInPreferred
+    })
 
-    const installmentExpenses = expenses
-        .filter(t => t.isInstallments)
-        .reduce((acc, t) => acc + t.amountInPreferred, 0)
+    const allCategories = Object.values(categoryMap).sort((a, b) => b.amount - a.amount)
+    const maxMainCategories = 5
+    let mainCategories = allCategories
+    let otherCategoriesAmount = 0
+    
+    if (allCategories.length > maxMainCategories) {
+        mainCategories = allCategories.slice(0, maxMainCategories - 1)
+        otherCategoriesAmount = allCategories.slice(maxMainCategories - 1).reduce((sum, c) => sum + c.amount, 0)
+        if (otherCategoriesAmount > 0) {
+            mainCategories.push({
+                name: "Otros",
+                amount: otherCategoriesAmount,
+                color: "#71717a"
+            })
+        }
+    }
 
-    const normalExpenses = totalExpenses - fixedExpenses - installmentExpenses
-
-    const fixedPct = totalExpenses > 0 ? (fixedExpenses / totalExpenses) * 100 : 0
-    const installmentPct = totalExpenses > 0 ? (installmentExpenses / totalExpenses) * 100 : 0
-    const normalPct = totalExpenses > 0 ? (normalExpenses / totalExpenses) * 100 : 0
+    const segments = mainCategories.map(cat => ({
+        ...cat,
+        pct: totalExpenses > 0 ? (cat.amount / totalExpenses) * 100 : 0
+    }))
 
 
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -171,24 +195,14 @@ export function MobileStatsCarousel({ transactions, preferredCurrency }: MobileS
                         <div className="block md:hidden">
                             <MobileExpenseDonut
                                 totalExpenses={totalExpenses}
-                                fixedPct={fixedPct}
-                                installmentPct={installmentPct}
-                                normalPct={normalPct}
-                                fixedPctValue={fixedPct.toFixed(0)}
-                                installmentPctValue={installmentPct.toFixed(0)}
-                                normalPctValue={normalPct.toFixed(0)}
+                                segments={segments}
                             />
                         </div>
                         {/* Desktop version */}
                         <div className="hidden md:block">
                             <DesktopExpenseDonut
                                 totalExpenses={totalExpenses}
-                                fixedPct={fixedPct}
-                                installmentPct={installmentPct}
-                                normalPct={normalPct}
-                                fixedPctValue={fixedPct.toFixed(0)}
-                                installmentPctValue={installmentPct.toFixed(0)}
-                                normalPctValue={normalPct.toFixed(0)}
+                                segments={segments}
                             />
                         </div>
                     </Card>

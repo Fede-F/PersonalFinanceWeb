@@ -85,11 +85,28 @@ export function CategorySelector({
   const handleCreateCategory = async (name: string) => {
     setIsCreating(true)
     try {
+      const curatedColors = [
+        "#3b82f6", // Blue
+        "#10b981", // Emerald
+        "#6366f1", // Indigo
+        "#f59e0b", // Amber
+        "#ef4444", // Red
+        "#8b5cf6", // Violet
+        "#ec4899", // Pink
+        "#06b6d4", // Cyan
+        "#f97316", // Orange
+        "#84cc16", // Lime
+        "#d946ef", // Fuchsia
+        "#f43f5e", // Rose
+      ]
+      const colorIndex = categories.length % curatedColors.length
+      const color = curatedColors[colorIndex]
+
       const formData = new FormData()
       formData.append("workspaceId", workspaceId)
       formData.append("name", name)
       formData.append("icon", "Tag") // Default icon
-      formData.append("color", "#10b981") // Default emerald color
+      formData.append("color", color)
       formData.append("type", "EXPENSE")
 
       const newCategory = await createCategory(formData)
