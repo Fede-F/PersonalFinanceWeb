@@ -30,6 +30,8 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { CreateWorkspaceForm } from "./create-workspace-form"
 import { WorkspaceSettingsDialog } from "./workspace-settings-dialog"
 
+import { useLoading } from "./loading-provider"
+
 interface Workspace {
     id: string
     name: string
@@ -51,6 +53,7 @@ export function WorkspaceSwitcher({ workspaces, currentWorkspaceId, currencies, 
     const [showSettingsDialog, setShowSettingsDialog] = React.useState(false)
     const router = useRouter()
     const searchParams = useSearchParams()
+    const { startLoading } = useLoading()
 
     const selectedWorkspace = workspaces.find((w) => w.id === currentWorkspaceId) || workspaces[0]
 
@@ -58,6 +61,7 @@ export function WorkspaceSwitcher({ workspaces, currentWorkspaceId, currencies, 
         setOpen(false)
         const params = new URLSearchParams(searchParams.toString())
         params.set("workspaceId", workspaceId)
+        startLoading()
         router.push(`/dashboard?${params.toString()}`)
     }
 

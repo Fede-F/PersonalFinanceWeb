@@ -2,7 +2,7 @@
 
 import { auth } from "@/auth"
 import { db } from "@/db"
-import { transactions, financialAccounts, categories, supportedCurrencies, users } from "@/db/schema"
+import { transactions, financialAccounts, categories, supportedCurrencies, users, workspaces } from "@/db/schema"
 import { eq, desc, sql, gte, lte, and } from "drizzle-orm"
 import { checkAndUpdateRates } from "@/lib/exchange-rates"
 import { encryptAmount, decryptAmount } from "@/lib/encryption"
@@ -14,87 +14,107 @@ export async function getDashboardData(workspaceId: string, month?: number, year
     // Check and trigger background rates updates if expired
     checkAndUpdateRates()
 
-    // 1. Auto-extension of fixed transactions
+    // 1. Auto-extension of fixed transactions (runs at most once every 24 hours per workspace/workflow)
     try {
-        const maxDatesByParent = await db
-            .select({
-                parentId: transactions.parentId,
-                maxDate: sql<Date>`max(${transactions.date})`
-            })
-            .from(transactions)
-            .where(
-                and(
-                    eq(transactions.workspaceId, workspaceId),
-                    eq(transactions.isFixed, true)
+        const [workspaceData] = await db
+            .select({ lastCheck: workspaces.lastFixedExtensionCheck })
+            .from(workspaces)
+            .where(eq(workspaces.id, workspaceId))
+
+        const now = new Date()
+        const twentyFourHours = 24 * 60 * 60 * 1000
+        const shouldRunCheck = !workspaceData || 
+            !workspaceData.lastCheck || 
+            (now.getTime() - new Date(workspaceData.lastCheck).getTime()) > twentyFourHours
+
+        if (shouldRunCheck) {
+            console.log(`Running auto-extension of fixed transactions for workspace ${workspaceId}...`)
+            const maxDatesByParent = await db
+                .select({
+                    parentId: transactions.parentId,
+                    maxDate: sql<Date>`max(${transactions.date})`
+                })
+                .from(transactions)
+                .where(
+                    and(
+                        eq(transactions.workspaceId, workspaceId),
+                        eq(transactions.isFixed, true)
+                    )
                 )
-            )
-            .groupBy(transactions.parentId)
+                .groupBy(transactions.parentId)
 
-        const oneYearFromNow = new Date()
-        oneYearFromNow.setMonth(oneYearFromNow.getMonth() + 12)
+            const oneYearFromNow = new Date()
+            oneYearFromNow.setMonth(oneYearFromNow.getMonth() + 12)
 
-        for (const group of maxDatesByParent) {
-            if (group.parentId && group.maxDate) {
-                const maxDate = new Date(group.maxDate)
-                if (maxDate < oneYearFromNow) {
-                    const [lastTx] = await db
-                        .select()
-                        .from(transactions)
-                        .where(
-                            and(
-                                eq(transactions.parentId, group.parentId),
-                                eq(transactions.date, group.maxDate)
+            for (const group of maxDatesByParent) {
+                if (group.parentId && group.maxDate) {
+                    const maxDate = new Date(group.maxDate)
+                    if (maxDate < oneYearFromNow) {
+                        const [lastTx] = await db
+                            .select()
+                            .from(transactions)
+                            .where(
+                                and(
+                                    eq(transactions.parentId, group.parentId),
+                                    eq(transactions.date, group.maxDate)
+                                )
                             )
-                        )
-                        .limit(1)
+                            .limit(1)
 
-                    if (lastTx) {
-                        lastTx.amount = decryptAmount(lastTx.amount)
-                        const rowsToInsert = []
-                        let balanceAdjustment = 0
-                        const txAmountInAccountCurrency = parseFloat(lastTx.amount) * parseFloat(lastTx.exchangeRate)
-                        const factor = lastTx.type === "INCOME" ? 1 : (lastTx.type === "EXPENSE" ? -1 : 0)
+                        if (lastTx) {
+                            lastTx.amount = decryptAmount(lastTx.amount)
+                            const rowsToInsert = []
+                            let balanceAdjustment = 0
+                            const txAmountInAccountCurrency = parseFloat(lastTx.amount) * parseFloat(lastTx.exchangeRate)
+                            const factor = lastTx.type === "INCOME" ? 1 : (lastTx.type === "EXPENSE" ? -1 : 0)
 
-                        for (let i = 1; i <= 12; i++) {
-                            const newDate = new Date(maxDate)
-                            newDate.setMonth(maxDate.getMonth() + i)
+                            for (let i = 1; i <= 12; i++) {
+                                const newDate = new Date(maxDate)
+                                newDate.setMonth(maxDate.getMonth() + i)
 
-                            rowsToInsert.push({
-                                workspaceId: lastTx.workspaceId,
-                                accountId: lastTx.accountId,
-                                categoryId: lastTx.categoryId,
-                                type: lastTx.type,
-                                concept: lastTx.concept,
-                                amount: encryptAmount(lastTx.amount),
-                                currency: lastTx.currency,
-                                description: lastTx.description,
-                                exchangeRate: lastTx.exchangeRate,
-                                isFixed: true,
-                                isInstallments: false,
-                                parentId: lastTx.parentId,
-                                date: newDate,
-                            })
-                            balanceAdjustment += txAmountInAccountCurrency * factor
-                        }
-                        if (rowsToInsert.length > 0) {
-                            await db.insert(transactions).values(rowsToInsert)
+                                rowsToInsert.push({
+                                    workspaceId: lastTx.workspaceId,
+                                    accountId: lastTx.accountId,
+                                    categoryId: lastTx.categoryId,
+                                    type: lastTx.type,
+                                    concept: lastTx.concept,
+                                    amount: encryptAmount(lastTx.amount),
+                                    currency: lastTx.currency,
+                                    description: lastTx.description,
+                                    exchangeRate: lastTx.exchangeRate,
+                                    isFixed: true,
+                                    isInstallments: false,
+                                    parentId: lastTx.parentId,
+                                    date: newDate,
+                                })
+                                balanceAdjustment += txAmountInAccountCurrency * factor
+                            }
+                            if (rowsToInsert.length > 0) {
+                                await db.insert(transactions).values(rowsToInsert)
 
-                            if (lastTx.accountId && balanceAdjustment !== 0) {
-                                const [account] = await db
-                                    .select()
-                                    .from(financialAccounts)
-                                    .where(eq(financialAccounts.id, lastTx.accountId))
-                                if (account) {
-                                    const newBalance = parseFloat(account.balance) + balanceAdjustment
-                                    await db.update(financialAccounts)
-                                        .set({ balance: newBalance.toFixed(2), updatedAt: new Date() })
+                                if (lastTx.accountId && balanceAdjustment !== 0) {
+                                    const [account] = await db
+                                        .select()
+                                        .from(financialAccounts)
                                         .where(eq(financialAccounts.id, lastTx.accountId))
+                                    if (account) {
+                                        const newBalance = parseFloat(account.balance) + balanceAdjustment
+                                        await db.update(financialAccounts)
+                                            .set({ balance: newBalance.toFixed(2), updatedAt: new Date() })
+                                            .where(eq(financialAccounts.id, lastTx.accountId))
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
+
+            // Update the last check timestamp in the database
+            await db
+                .update(workspaces)
+                .set({ lastFixedExtensionCheck: now, updatedAt: new Date() })
+                .where(eq(workspaces.id, workspaceId))
         }
     } catch (err) {
         console.error("Error auto-extending fixed transactions:", err)
@@ -171,6 +191,7 @@ export async function getDashboardData(workspaceId: string, month?: number, year
             createdById: transactions.createdById,
             creatorName: users.name,
             creatorEmail: users.email,
+            createdAt: transactions.createdAt,
         })
         .from(transactions)
         .leftJoin(financialAccounts, eq(transactions.accountId, financialAccounts.id))

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react"
 import { format, addMonths, subMonths } from "date-fns"
 import { es } from "date-fns/locale"
+import { useLoading } from "./loading-provider"
 
 interface PeriodSelectorProps {
     initialMonth?: number
@@ -14,6 +15,7 @@ interface PeriodSelectorProps {
 export function PeriodSelector({ initialMonth, initialYear }: PeriodSelectorProps) {
     const router = useRouter()
     const searchParams = useSearchParams()
+    const { startLoading } = useLoading()
     
     // Si no vienen valores, usamos la fecha actual
     const now = new Date()
@@ -28,6 +30,7 @@ export function PeriodSelector({ initialMonth, initialYear }: PeriodSelectorProp
         params.set("month", newDate.getMonth().toString())
         params.set("year", newDate.getFullYear().toString())
         
+        startLoading()
         router.push(`?${params.toString()}`)
     }
 
@@ -37,6 +40,7 @@ export function PeriodSelector({ initialMonth, initialYear }: PeriodSelectorProp
         const params = new URLSearchParams(searchParams.toString())
         params.delete("month")
         params.delete("year")
+        startLoading()
         router.push(`?${params.toString()}`)
     }
 

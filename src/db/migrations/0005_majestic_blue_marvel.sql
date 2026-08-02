@@ -1,0 +1,1 @@
+ALTER TABLE "workspaces" ADD COLUMN "last_fixed_extension_check" timestamp;

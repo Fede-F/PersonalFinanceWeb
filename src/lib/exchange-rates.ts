@@ -1,6 +1,6 @@
 import { db } from "@/db"
 import { marketRates } from "@/db/schema"
-import { desc } from "drizzle-orm"
+import { desc, sql } from "drizzle-orm"
 
 export async function updateMarketRates() {
     try {
@@ -36,7 +36,15 @@ export async function updateMarketRates() {
         }
 
         if (valuesToInsert.length > 0) {
-            await db.insert(marketRates).values(valuesToInsert)
+            await db.insert(marketRates)
+                .values(valuesToInsert)
+                .onConflictDoUpdate({
+                    target: [marketRates.baseCurrency, marketRates.targetCurrency],
+                    set: {
+                        rate: sql`excluded.rate`,
+                        date: sql`excluded.date`
+                    }
+                })
             console.log(`Successfully updated ${valuesToInsert.length} global market rates.`)
         }
         return { success: true }

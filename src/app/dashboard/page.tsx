@@ -1,7 +1,7 @@
 import { auth } from "@/auth"
 import { db } from "@/db"
 import { workspaces, workspaceMembers, supportedCurrencies, users, marketRates } from "@/db/schema"
-import { eq, sql } from "drizzle-orm"
+import { eq, sql, and, inArray } from "drizzle-orm"
 import { Card, CardHeader, CardContent, CardDescription } from "@/components/ui/card"
 import { getDashboardData } from "@/app/actions/dashboard"
 import { redirect } from "next/navigation"
@@ -24,6 +24,21 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { ThemeSync } from "@/components/theme-sync"
 import { NotificationBell } from "@/components/notification-bell"
 import { ActiveWorkspaceTracker } from "@/components/active-workspace-tracker"
+import { PeriodChangeTracker } from "@/components/loading-provider"
+
+const convertAmount = (amount: number, from: string, to: string, latestRatesMap: Record<string, Record<string, number>>): number => {
+    if (from === to) return amount
+    const directRate = latestRatesMap[from]?.[to]
+    if (directRate !== undefined) {
+        return amount * directRate
+    }
+    const rateToUSD = latestRatesMap[from]?.["USD"]
+    const rateFromUSD = latestRatesMap["USD"]?.[to]
+    if (rateToUSD !== undefined && rateFromUSD !== undefined) {
+        return amount * rateToUSD * rateFromUSD
+    }
+    return amount
+}
 
 export default async function DashboardPage(props: {
     searchParams: Promise<{ workspaceId?: string; month?: string; year?: string }>
@@ -84,41 +99,38 @@ export default async function DashboardPage(props: {
 
     const preferredCurrency = currentWorkspace.baseCurrency
 
-    // Fetch market rates and build dynamic latest rates map
-    const allRates = await db.select().from(marketRates)
+    // Extract unique currencies involved in this dashboard workspace/workflow
+    const relatedCurrencies = Array.from(new Set([
+        preferredCurrency,
+        "USD",
+        ...accounts.map(a => a.currency),
+        ...recentTransactions.map(tx => tx.currency)
+    ]))
+
+    // Fetch only relevant market rates (since we no longer store history, this is extremely fast)
+    const allRates = relatedCurrencies.length > 0
+        ? await db
+            .select()
+            .from(marketRates)
+            .where(
+                and(
+                    inArray(marketRates.baseCurrency, relatedCurrencies),
+                    inArray(marketRates.targetCurrency, relatedCurrencies)
+                )
+            )
+        : []
+
     const latestRatesMap: Record<string, Record<string, number>> = {}
-    const latestDatesMap: Record<string, Record<string, string>> = {}
 
     for (const r of allRates) {
         const base = r.baseCurrency
         const target = r.targetCurrency
         const rateVal = parseFloat(r.rate)
-        const dateStr = r.date.toISOString()
 
         if (!latestRatesMap[base]) {
             latestRatesMap[base] = {}
-            latestDatesMap[base] = {}
         }
-
-        const existingDate = latestDatesMap[base][target]
-        if (!existingDate || dateStr > existingDate) {
-            latestRatesMap[base][target] = rateVal
-            latestDatesMap[base][target] = dateStr
-        }
-    }
-
-    const convertAmount = (amount: number, from: string, to: string): number => {
-        if (from === to) return amount
-        const directRate = latestRatesMap[from]?.[to]
-        if (directRate !== undefined) {
-            return amount * directRate
-        }
-        const rateToUSD = latestRatesMap[from]?.["USD"]
-        const rateFromUSD = latestRatesMap["USD"]?.[to]
-        if (rateToUSD !== undefined && rateFromUSD !== undefined) {
-            return amount * rateToUSD * rateFromUSD
-        }
-        return amount
+        latestRatesMap[base][target] = rateVal
     }
 
     // Normalize recent transactions with dynamic conversion rates
@@ -126,8 +138,8 @@ export default async function DashboardPage(props: {
         const amountFloat = parseFloat(tx.amount)
         return {
             ...tx,
-            amountInPreferred: convertAmount(amountFloat, tx.currency, preferredCurrency),
-            amountInUSD: convertAmount(amountFloat, tx.currency, "USD")
+            amountInPreferred: convertAmount(amountFloat, tx.currency, preferredCurrency, latestRatesMap),
+            amountInUSD: convertAmount(amountFloat, tx.currency, "USD", latestRatesMap)
         }
     })
 
@@ -135,7 +147,7 @@ export default async function DashboardPage(props: {
         const getGroup = (tx: any) => {
             if (tx.isFixed && tx.type === 'INCOME') return 4;
             if (tx.isFixed && tx.type === 'EXPENSE') return 3;
-            if (tx.type === 'EXPENSE' && tx.accountType === 'CREDIT_CARD') return 2;
+            if (tx.type === 'EXPENSE' && (tx.accountType === 'CREDIT_CARD' || tx.isInstallments)) return 2;
             return 1;
         }
 
@@ -149,31 +161,40 @@ export default async function DashboardPage(props: {
         const dateA = new Date(a.date).getTime();
         const dateB = new Date(b.date).getTime();
 
-        return dateB - dateA;
+        if (dateA !== dateB) {
+            return dateB - dateA;
+        }
+
+        // Within the same day, order by insertion order (createdAt) descending so the newest insertion is shown first
+        const createdAtA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const createdAtB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return createdAtB - createdAtA;
     })
 
-    // Sum using normalized preferred and USD amounts
-    const totalIncome = normalizedTransactions
-        .filter(tx => tx.type === 'INCOME')
-        .reduce((acc, curr) => acc + curr.amountInPreferred, 0)
+    // Sum using normalized preferred and USD amounts in a single-pass loop
+    let totalIncome = 0
+    let totalExpense = 0
+    let totalIncomeInUSD = 0
+    let totalExpenseInUSD = 0
 
-    const totalExpense = normalizedTransactions
-        .filter(tx => tx.type === 'EXPENSE')
-        .reduce((acc, curr) => acc + curr.amountInPreferred, 0)
+    for (const tx of normalizedTransactions) {
+        if (tx.type === 'INCOME') {
+            totalIncome += tx.amountInPreferred
+            totalIncomeInUSD += tx.amountInUSD
+        } else if (tx.type === 'EXPENSE') {
+            totalExpense += tx.amountInPreferred
+            totalExpenseInUSD += tx.amountInUSD
+        }
+    }
 
-    const totalIncomeInUSD = normalizedTransactions
-        .filter(tx => tx.type === 'INCOME')
-        .reduce((acc, curr) => acc + curr.amountInUSD, 0)
-
-    const totalExpenseInUSD = normalizedTransactions
-        .filter(tx => tx.type === 'EXPENSE')
-        .reduce((acc, curr) => acc + curr.amountInUSD, 0)
+    const activePeriod = `${currentWorkspace.id}-${month !== undefined ? month : 'current'}-${year !== undefined ? year : 'current'}`
 
     return (
         <div className="flex flex-col min-h-screen bg-zinc-50/50 dark:bg-zinc-950">
             {/* Theme synchronizer */}
             <ThemeSync savedTheme={userData.theme} />
             <ActiveWorkspaceTracker workspaceId={currentWorkspace.id} />
+            <PeriodChangeTracker period={activePeriod} />
 
             {/* Header */}
             <header className="sticky top-0 z-30 flex h-16 items-center gap-2 px-3 sm:gap-4 sm:px-6 border-b bg-white/80 backdrop-blur-md dark:bg-zinc-900/80">

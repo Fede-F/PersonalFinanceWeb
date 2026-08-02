@@ -1,0 +1,2 @@
+ALTER TABLE "market_rates" DROP CONSTRAINT "market_rates_base_currency_target_currency_date_unique";--> statement-breakpoint
+ALTER TABLE "market_rates" ADD CONSTRAINT "market_rates_base_currency_target_currency_unique" UNIQUE("base_currency","target_currency");

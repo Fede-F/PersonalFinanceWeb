@@ -45,9 +45,9 @@ Una aplicación web de finanzas personales escalable y colaborativa.
 - **Money Handling:**
     - Nunca usar `float` para dinero. Usar `decimal`/`numeric` en DB.
     - **UX:** Uso de `MoneyInput` con separadores de miles y coma decimal en tiempo real.
-    - Multimoneda: Guardar monto original + moneda original + tasa de cambio histórica.
+    - Multimoneda: Guardar monto original + moneda original + tasa de cambio inmutable en la transacción (`transactions.exchangeRate`). La tabla global `market_rates` solo almacena el último valor vigente.
     - Sincronización: La moneda por defecto del usuario se sincroniza con la `base_currency` de su workspace activo.
-    - Cotizaciones de Mercado: Tabla global `market_rates` (sin `workspace_id`).
+    - Cotizaciones de Mercado: Tabla global `market_rates` (sin `workspace_id`, opera como upsert).
 - **Validation Standard:**
     - Uso de `React Hook Form` + `Zod` para validación en cliente con marcado visual de campos inválidos (bordes rojos y mensajes localizados).
     - Server Actions deben usar `safeParse` de Zod para evitar excepciones fatales.
@@ -57,7 +57,7 @@ Una aplicación web de finanzas personales escalable y colaborativa.
 ### Global / System Tables
 - `users`: id (UUID), email, full_name, password (hashed, optional for OAuth users).
 - `accounts`: id (provider + id), user_id, type, provider, access_token, etc. (NextAuth tables).
-- `market_rates`: id, base_currency, target_currency, rate, date (Unique constraint on currency pair + date).
+- `market_rates`: id, base_currency, target_currency, rate, date (Unique constraint on base_currency + target_currency; almacena solo el último valor/upsert).
 - `supported_currencies`: code (ISO), name, type.
 
 ### Tenant Tables (Must have `workspace_id`)
@@ -78,3 +78,10 @@ Una aplicación web de finanzas personales escalable y colaborativa.
 2. **Type Safety:** No uses `any`. Define interfaces para todo.
 3. **Component Modularity:** Componentes pequeños y reutilizables. Usa la estructura de carpetas de Next.js App Router correctamente.
 4. **Migrations:** Todo cambio en la BD debe hacerse vía migración de Drizzle (`drizzle-kit generate` + `migrate`).
+
+## 6. UX Patterns (Loading & Sorting)
+- **Rastreo de Carga en Cambios de Período**: Las transiciones del selector de fecha o workspace activan un indicador de carga (`LoadingProvider`) y se apagan en el cliente únicamente tras recibir y montar el RSC payload del servidor mediante el componente cliente `<PeriodChangeTracker>`.
+- **Orden de Actividad / Transacciones**:
+  1. Se agrupan por prioridad: Gastos comunes (Grupo 1) -> Tarjeta de crédito o en cuotas (Grupo 2) -> Gastos fijos (Grupo 3) -> Ingresos fijos (Grupo 4).
+  2. Dentro del mismo grupo, se ordenan por fecha comercial descendente (`date`).
+  3. Si la fecha coincide, se ordenan cronológicamente según la hora de inserción descendente (`createdAt`).

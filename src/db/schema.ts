@@ -77,7 +77,7 @@ export const marketRates = pgTable("market_rates", {
     rate: decimal("rate", { precision: 20, scale: 10 }).notNull(),
     date: timestamp("date").notNull(),
 }, (t) => ({
-    uniquePairDate: unique().on(t.baseCurrency, t.targetCurrency, t.date),
+    uniquePair: unique().on(t.baseCurrency, t.targetCurrency),
 }));
 
 export const notifications = pgTable("notifications", {
@@ -98,6 +98,7 @@ export const workspaces = pgTable("workspaces", {
     name: text("name").notNull(),
     ownerId: uuid("owner_id").notNull().references(() => users.id),
     baseCurrency: varchar("base_currency", { length: 3 }).notNull().references(() => supportedCurrencies.code),
+    lastFixedExtensionCheck: timestamp("last_fixed_extension_check"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
