@@ -299,6 +299,7 @@ export default async function DashboardPage(props: {
                                     <p className="text-zinc-500 text-sm">Transacciones registradas en este período</p>
                                 </div>
                                 <TransactionModal
+                                    key={currentWorkspace.id}
                                     workspaceId={currentWorkspace.id}
                                     accounts={accounts}
                                     categories={categories}
@@ -390,6 +391,7 @@ export default async function DashboardPage(props: {
                             </div>
                             <div className="flex justify-center w-full">
                                 <TransactionModal
+                                    key={currentWorkspace.id}
                                     workspaceId={currentWorkspace.id}
                                     accounts={accounts}
                                     categories={categories}
