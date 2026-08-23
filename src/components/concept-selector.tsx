@@ -64,6 +64,7 @@ export function ConceptSelector({ workspaceId, quickConcepts, defaultValue, onCh
 
     const ts = new TomSelect(selectRef.current, {
       create: true,
+      createOnBlur: true,
       maxItems: 1,
       placeholder: "Ej. Almuerzo, Nafta, Starbucks...",
       options: uniqueOptions.map(c => ({ value: c, text: c })),
