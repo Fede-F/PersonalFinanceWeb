@@ -15,13 +15,15 @@ interface AssetSearchComboboxProps {
     onOpenAddCustomModal?: () => void
 }
 
+const searchMemoryCache = new Map<string, MarketSearchResult[]>()
+
 const TYPE_COLORS: Record<string, string> = {
-    CRYPTO: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
-    STOCK: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
-    ETF: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
-    CEDEAR: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
-    BOND: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20",
-    OTHER: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/20",
+    CRYPTO: "bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/30",
+    STOCK: "bg-blue-500/15 text-blue-800 dark:text-blue-300 border-blue-500/30",
+    ETF: "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/30",
+    CEDEAR: "bg-purple-500/15 text-purple-800 dark:text-purple-300 border-purple-500/30",
+    BOND: "bg-cyan-500/15 text-cyan-800 dark:text-cyan-300 border-cyan-500/30",
+    OTHER: "bg-zinc-500/15 text-zinc-800 dark:text-zinc-300 border-zinc-500/30",
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -56,13 +58,20 @@ export function AssetSearchCombobox({
         return () => document.removeEventListener("mousedown", handleClickOutside)
     }, [])
 
-    // Fetch initial recent assets when focused
+    // Fetch initial recent assets when focused with memory caching
     const loadRecentOrSearch = React.useCallback(
         async (q: string) => {
+            const cacheKey = `${workspaceId}_${q.trim().toLowerCase()}`
+            if (searchMemoryCache.has(cacheKey)) {
+                setResults(searchMemoryCache.get(cacheKey)!)
+                return
+            }
+
             setIsLoading(true)
             try {
                 const res = await searchMarketAssets(q, workspaceId)
                 if (res.success && res.results) {
+                    searchMemoryCache.set(cacheKey, res.results)
                     setResults(res.results)
                 }
             } catch (err) {

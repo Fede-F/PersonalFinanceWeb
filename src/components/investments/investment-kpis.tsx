@@ -4,6 +4,7 @@ import * as React from "react"
 import { Card } from "@/components/ui/card"
 import { MaskedValue } from "@/components/privacy-provider"
 import { useInvestmentCurrency } from "./investment-currency-provider"
+import { formatCurrency, formatPercentage } from "@/lib/formatters"
 import { TrendingUp, TrendingDown, Wallet, DollarSign, PiggyBank, Layers } from "lucide-react"
 
 interface InvestmentKPIsProps {
@@ -31,11 +32,11 @@ export function InvestmentKPIs({
     baseCurrency,
     activeHoldingsCount,
 }: InvestmentKPIsProps) {
-    const { isUSD, selectedCurrency } = useInvestmentCurrency()
+    const { isUSD, selectedCurrency, localCurrency } = useInvestmentCurrency()
 
     // Determine primary and secondary display values based on active currency switch
-    const primaryCurrency = isUSD ? "USD" : baseCurrency
-    const secondaryCurrency = isUSD ? baseCurrency : "USD"
+    const primaryCurrency = isUSD ? "USD" : localCurrency
+    const secondaryCurrency = isUSD ? localCurrency : "USD"
 
     const primaryTotalValue = isUSD ? totalValueUSD : totalValue
     const secondaryTotalValue = isUSD ? totalValue : totalValueUSD
@@ -49,16 +50,8 @@ export function InvestmentKPIs({
 
     const isPositive = primaryPnLAmount >= 0
 
-    const formatCurrency = (val: number, curr: string) => {
-        return new Intl.NumberFormat("es-AR", {
-            style: "currency",
-            currency: curr,
-            maximumFractionDigits: curr === "USD" ? 2 : 0,
-        }).format(val)
-    }
-
     return (
-        <div>
+        <div key={selectedCurrency} className="animate-in fade-in duration-300">
             {/* Desktop Grid */}
             <div className="hidden md:grid grid-cols-4 gap-4">
                 {/* 1. Valuación Total */}
@@ -67,16 +60,16 @@ export function InvestmentKPIs({
                         <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                             Valuación Total
                         </span>
-                        <div className="p-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg">
+                        <div className="p-2 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 rounded-lg">
                             <Wallet className="w-4 h-4" />
                         </div>
                     </div>
                     <div className="mt-3">
-                        <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+                        <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 font-mono tabular-nums">
                             <MaskedValue value={formatCurrency(primaryTotalValue, primaryCurrency)} />
                         </div>
-                        {baseCurrency !== "USD" && (
-                            <div className="text-xs text-zinc-400 mt-0.5">
+                        {localCurrency !== "USD" && (
+                            <div className="text-xs text-zinc-400 mt-0.5 font-mono tabular-nums">
                                 ≈ <MaskedValue value={formatCurrency(secondaryTotalValue, secondaryCurrency)} />
                             </div>
                         )}
@@ -92,8 +85,8 @@ export function InvestmentKPIs({
                         <div
                             className={`p-2 rounded-lg ${
                                 isPositive
-                                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                                    : "bg-rose-500/10 text-rose-600 dark:text-rose-400"
+                                    ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                                    : "bg-rose-500/10 text-rose-700 dark:text-rose-400"
                             }`}
                         >
                             {isPositive ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
@@ -101,23 +94,23 @@ export function InvestmentKPIs({
                     </div>
                     <div className="mt-3">
                         <div
-                            className={`text-2xl font-bold ${
-                                isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                            className={`text-2xl font-bold font-mono tabular-nums ${
+                                isPositive ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400"
                             }`}
                         >
                             {isPositive ? "+" : ""}
                             <MaskedValue value={formatCurrency(primaryPnLAmount, primaryCurrency)} />
                         </div>
-                        <div className="flex items-center gap-2 mt-0.5">
+                        <div className="flex items-center gap-2 mt-0.5 font-mono tabular-nums">
                             <span
-                                className={`text-xs font-semibold inline-flex items-center gap-1 ${
-                                    isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                                className={`text-xs font-bold inline-flex items-center gap-1 ${
+                                    isPositive ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400"
                                 }`}
                             >
                                 {isPositive ? "+" : ""}
                                 {primaryPnLPct.toFixed(2)}% retorno
                             </span>
-                            {baseCurrency !== "USD" && (
+                            {localCurrency !== "USD" && (
                                 <span className="text-xs text-zinc-400">
                                     (≈ <MaskedValue value={`${secondaryPnLAmount >= 0 ? "+" : ""}${formatCurrency(secondaryPnLAmount, secondaryCurrency)}`} />)
                                 </span>
@@ -132,16 +125,16 @@ export function InvestmentKPIs({
                         <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                             Capital Invertido
                         </span>
-                        <div className="p-2 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-lg">
+                        <div className="p-2 bg-blue-500/10 text-blue-700 dark:text-blue-400 rounded-lg">
                             <PiggyBank className="w-4 h-4" />
                         </div>
                     </div>
                     <div className="mt-3">
-                        <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+                        <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 font-mono tabular-nums">
                             <MaskedValue value={formatCurrency(primaryInvested, primaryCurrency)} />
                         </div>
-                        {baseCurrency !== "USD" && (
-                            <div className="text-xs text-zinc-400 mt-0.5">
+                        {localCurrency !== "USD" && (
+                            <div className="text-xs text-zinc-400 mt-0.5 font-mono tabular-nums">
                                 ≈ <MaskedValue value={formatCurrency(secondaryInvested, secondaryCurrency)} />
                             </div>
                         )}
@@ -154,12 +147,12 @@ export function InvestmentKPIs({
                         <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                             Posiciones Activas
                         </span>
-                        <div className="p-2 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-lg">
+                        <div className="p-2 bg-purple-500/10 text-purple-700 dark:text-purple-400 rounded-lg">
                             <Layers className="w-4 h-4" />
                         </div>
                     </div>
                     <div className="mt-3">
-                        <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+                        <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 font-mono tabular-nums">
                             {activeHoldingsCount}
                         </div>
                         <div className="text-xs text-zinc-400 mt-0.5">Activos con saldo positivo</div>
@@ -173,16 +166,16 @@ export function InvestmentKPIs({
                 <Card className="snap-center shrink-0 w-[78vw] max-w-[280px] p-4 border-none shadow-sm bg-white dark:bg-zinc-900">
                     <div className="flex items-center justify-between">
                         <span className="text-[11px] font-semibold text-zinc-500 uppercase">Valuación Total</span>
-                        <div className="p-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-md">
+                        <div className="p-1.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 rounded-md">
                             <Wallet className="w-3.5 h-3.5" />
                         </div>
                     </div>
                     <div className="mt-2">
-                        <div className="text-xl font-bold text-zinc-900 dark:text-zinc-50">
+                        <div className="text-xl font-bold text-zinc-900 dark:text-zinc-50 font-mono tabular-nums">
                             <MaskedValue value={formatCurrency(primaryTotalValue, primaryCurrency)} />
                         </div>
-                        {baseCurrency !== "USD" && (
-                            <div className="text-[11px] text-zinc-400">
+                        {localCurrency !== "USD" && (
+                            <div className="text-[11px] text-zinc-400 font-mono tabular-nums">
                                 ≈ <MaskedValue value={formatCurrency(secondaryTotalValue, secondaryCurrency)} />
                             </div>
                         )}
@@ -196,8 +189,8 @@ export function InvestmentKPIs({
                         <div
                             className={`p-1.5 rounded-md ${
                                 isPositive
-                                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                                    : "bg-rose-500/10 text-rose-600 dark:text-rose-400"
+                                    ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                                    : "bg-rose-500/10 text-rose-700 dark:text-rose-400"
                             }`}
                         >
                             {isPositive ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
@@ -205,23 +198,23 @@ export function InvestmentKPIs({
                     </div>
                     <div className="mt-2">
                         <div
-                            className={`text-xl font-bold ${
-                                isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                            className={`text-xl font-bold font-mono tabular-nums ${
+                                isPositive ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400"
                             }`}
                         >
                             {isPositive ? "+" : ""}
                             <MaskedValue value={formatCurrency(primaryPnLAmount, primaryCurrency)} />
                         </div>
-                        <div className="flex items-center gap-1.5 mt-0.5">
+                        <div className="flex items-center gap-1.5 mt-0.5 font-mono tabular-nums">
                             <span
-                                className={`text-[11px] font-semibold ${
-                                    isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                                className={`text-[11px] font-bold ${
+                                    isPositive ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400"
                                 }`}
                             >
                                 {isPositive ? "+" : ""}
                                 {primaryPnLPct.toFixed(2)}%
                             </span>
-                            {baseCurrency !== "USD" && (
+                            {localCurrency !== "USD" && (
                                 <span className="text-[10px] text-zinc-400 truncate">
                                     (≈ <MaskedValue value={`${secondaryPnLAmount >= 0 ? "+" : ""}${formatCurrency(secondaryPnLAmount, secondaryCurrency)}`} />)
                                 </span>
@@ -234,16 +227,16 @@ export function InvestmentKPIs({
                 <Card className="snap-center shrink-0 w-[78vw] max-w-[280px] p-4 border-none shadow-sm bg-white dark:bg-zinc-900">
                     <div className="flex items-center justify-between">
                         <span className="text-[11px] font-semibold text-zinc-500 uppercase">Capital Invertido</span>
-                        <div className="p-1.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-md">
+                        <div className="p-1.5 bg-blue-500/10 text-blue-700 dark:text-blue-400 rounded-md">
                             <PiggyBank className="w-3.5 h-3.5" />
                         </div>
                     </div>
                     <div className="mt-2">
-                        <div className="text-xl font-bold text-zinc-900 dark:text-zinc-50">
+                        <div className="text-xl font-bold text-zinc-900 dark:text-zinc-50 font-mono tabular-nums">
                             <MaskedValue value={formatCurrency(primaryInvested, primaryCurrency)} />
                         </div>
-                        {baseCurrency !== "USD" && (
-                            <div className="text-[11px] text-zinc-400">
+                        {localCurrency !== "USD" && (
+                            <div className="text-[11px] text-zinc-400 font-mono tabular-nums">
                                 ≈ <MaskedValue value={formatCurrency(secondaryInvested, secondaryCurrency)} />
                             </div>
                         )}

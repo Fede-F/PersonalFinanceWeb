@@ -45,7 +45,7 @@ export function AnimatedNumber({ value, prefix = "", duration = 1000, className 
   }
 
   return (
-    <span className={className} suppressHydrationWarning>
+    <span className={`font-mono tabular-nums ${className}`} suppressHydrationWarning>
       {prefix} {displayValue.toLocaleString("es-AR", { 
         minimumFractionDigits: 0, 
         maximumFractionDigits: 0 

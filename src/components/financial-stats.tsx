@@ -4,8 +4,9 @@ import * as React from "react"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import { TrendingUp, TrendingDown, ShieldAlert, PiggyBank } from "lucide-react"
-
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts"
+import { MaskedValue } from "@/components/privacy-provider"
+import { formatCurrency } from "@/lib/formatters"
 
 interface StatsProps {
     transactions: any[]
@@ -53,16 +54,10 @@ export function ExpensesDistribution({ transactions, preferredCurrency }: StatsP
         }
     }
 
-    // Compute percentages
     const categoriesWithPct = mainCategories.map(cat => ({
         ...cat,
-        value: cat.amount,
         pct: totalExpenses > 0 ? (cat.amount / totalExpenses) * 100 : 0
     }))
-
-    const formatCurrency = (val: number) => {
-        return `${preferredCurrency} ${val.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
-    }
 
     const CustomTooltip = ({ active, payload }: any) => {
         if (active && payload && payload.length) {
@@ -75,11 +70,13 @@ export function ExpensesDistribution({ transactions, preferredCurrency }: StatsP
                     </div>
                     <div className="flex justify-between gap-4 text-zinc-500 dark:text-zinc-400">
                         <span>Monto:</span>
-                        <span className="font-bold text-zinc-800 dark:text-zinc-200">{formatCurrency(data.value)}</span>
+                        <span className="font-bold text-zinc-800 dark:text-zinc-200 font-mono tabular-nums">
+                            <MaskedValue value={formatCurrency(data.amount, preferredCurrency)} />
+                        </span>
                     </div>
                     <div className="flex justify-between gap-4 text-zinc-500 dark:text-zinc-400">
                         <span>Porcentaje:</span>
-                        <span className="font-bold text-zinc-800 dark:text-zinc-200">{data.pct.toFixed(1)}%</span>
+                        <span className="font-bold text-zinc-800 dark:text-zinc-200 font-mono tabular-nums">{data.pct.toFixed(1)}%</span>
                     </div>
                 </div>
             )
@@ -110,10 +107,10 @@ export function ExpensesDistribution({ transactions, preferredCurrency }: StatsP
                                             data={categoriesWithPct}
                                             cx="50%"
                                             cy="50%"
-                                            innerRadius={48}
-                                            outerRadius={70}
+                                            innerRadius="65%"
+                                            outerRadius="85%"
                                             paddingAngle={3}
-                                            dataKey="value"
+                                            dataKey="amount"
                                         >
                                             {categoriesWithPct.map((entry, index) => (
                                                 <Cell key={`cell-${index}`} fill={entry.color} stroke="transparent" />
@@ -123,8 +120,8 @@ export function ExpensesDistribution({ transactions, preferredCurrency }: StatsP
                                 </ResponsiveContainer>
                                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-2 pointer-events-none">
                                     <span className="text-[9px] uppercase font-bold text-zinc-400 tracking-wider">Total</span>
-                                    <span className="text-xs sm:text-sm font-black text-zinc-800 dark:text-zinc-100 tabular-nums truncate max-w-[100px]">
-                                        {formatCurrency(totalExpenses)}
+                                    <span className="text-xs sm:text-sm font-black text-zinc-800 dark:text-zinc-100 font-mono tabular-nums truncate max-w-[100px]">
+                                        <MaskedValue value={formatCurrency(totalExpenses, preferredCurrency)} />
                                     </span>
                                 </div>
                             </>
@@ -141,9 +138,9 @@ export function ExpensesDistribution({ transactions, preferredCurrency }: StatsP
                                         <p className="text-xs sm:text-sm xl:text-base font-bold text-zinc-700 dark:text-zinc-300 leading-tight">{seg.name}</p>
                                     </div>
                                 </div>
-                                <div className="text-right" suppressHydrationWarning>
-                                    <p className="text-xs sm:text-sm xl:text-base font-extrabold text-zinc-900 dark:text-zinc-100 tabular-nums">
-                                        {preferredCurrency} {seg.amount.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                <div className="text-right font-mono tabular-nums" suppressHydrationWarning>
+                                    <p className="text-xs sm:text-sm xl:text-base font-extrabold text-zinc-900 dark:text-zinc-100">
+                                        <MaskedValue value={formatCurrency(seg.amount, preferredCurrency)} />
                                     </p>
                                     <p className="text-[11px] xl:text-xs font-bold" style={{ color: seg.color }}>{seg.pct.toFixed(0)}%</p>
                                 </div>
@@ -177,27 +174,27 @@ export function SavingsRate({ transactions, preferredCurrency }: StatsProps) {
                 <div className="flex items-center gap-3 sm:gap-4">
                     <div className={cn(
                         "w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-inner shrink-0",
-                        netSavings >= 0 ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10" : "bg-rose-50 text-rose-600 dark:bg-rose-500/10"
+                        netSavings >= 0 ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400" : "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400"
                     )}>
                         {netSavings >= 0 ? <PiggyBank size={20} className="sm:w-6 sm:h-6" /> : <ShieldAlert size={20} className="sm:w-6 sm:h-6" />}
                     </div>
-                    <div suppressHydrationWarning className="min-w-0">
-                        <p className="text-[10px] sm:text-xs xl:text-sm font-medium text-zinc-400">Balance Neto</p>
+                    <div suppressHydrationWarning className="min-w-0 font-mono tabular-nums">
+                        <p className="text-[10px] sm:text-xs xl:text-sm font-medium text-zinc-400 font-sans">Balance Neto</p>
                         <p className={cn(
                             "text-lg sm:text-2xl xl:text-3xl font-black tabular-nums truncate leading-tight",
-                            netSavings >= 0 ? "text-emerald-600" : "text-rose-600"
+                            netSavings >= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400"
                         )}>
-                            {netSavings >= 0 ? "+" : ""}{preferredCurrency} {netSavings.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                            <MaskedValue value={`${netSavings >= 0 ? "+" : ""}${formatCurrency(netSavings, preferredCurrency)}`} />
                         </p>
                     </div>
                 </div>
 
                 {/* Progress Bar comparisons */}
                 <div className="space-y-2">
-                    <div className="flex justify-between text-[10px] sm:text-xs xl:text-sm font-bold" suppressHydrationWarning>
-                        <span className="text-zinc-400">Presupuesto Utilizado</span>
+                    <div className="flex justify-between text-[10px] sm:text-xs xl:text-sm font-bold font-mono tabular-nums" suppressHydrationWarning>
+                        <span className="text-zinc-400 font-sans">Presupuesto Utilizado</span>
                         <span className={cn(
-                            netSavings >= 0 ? "text-zinc-600 dark:text-zinc-300" : "text-rose-500"
+                            netSavings >= 0 ? "text-zinc-600 dark:text-zinc-300" : "text-rose-700 dark:text-rose-400"
                         )}>
                             {totalIncome > 0 ? ((totalExpenses / totalIncome) * 100).toFixed(0) : "100"}%
                         </span>
@@ -219,9 +216,9 @@ export function SavingsRate({ transactions, preferredCurrency }: StatsProps) {
                             />
                         )}
                     </div>
-                    <div className="flex justify-between text-[8px] sm:text-[10px] xl:text-xs text-zinc-400 font-bold uppercase tracking-wider gap-2" suppressHydrationWarning>
-                        <span className="truncate">Ingresos: {preferredCurrency} {totalIncome.toLocaleString("es-AR", { minimumFractionDigits: 0 })}</span>
-                        <span className="truncate">Gastos: {preferredCurrency} {totalExpenses.toLocaleString("es-AR", { minimumFractionDigits: 0 })}</span>
+                    <div className="flex justify-between text-[8px] sm:text-[10px] xl:text-xs text-zinc-400 font-bold uppercase tracking-wider gap-2 font-mono tabular-nums" suppressHydrationWarning>
+                        <span className="truncate">Ingresos: <MaskedValue value={formatCurrency(totalIncome, preferredCurrency)} /></span>
+                        <span className="truncate">Gastos: <MaskedValue value={formatCurrency(totalExpenses, preferredCurrency)} /></span>
                     </div>
                 </div>
 
@@ -231,11 +228,11 @@ export function SavingsRate({ transactions, preferredCurrency }: StatsProps) {
                         "Registra tus ingresos y gastos para calcular tu ahorro."
                     ) : netSavings >= 0 ? (
                         <>
-                            Estás ahorrando el <strong className="text-emerald-600 dark:text-emerald-400 font-extrabold">{savingsRate.toFixed(0)}%</strong> de tus ingresos mensuales.
+                            Estás ahorrando el <strong className="text-emerald-700 dark:text-emerald-400 font-extrabold font-mono tabular-nums">{savingsRate.toFixed(0)}%</strong> de tus ingresos mensuales.
                         </>
                     ) : (
                         <>
-                            <strong className="text-rose-500 font-extrabold">Alerta de presupuesto</strong>: tus gastos superaron tus ingresos por {preferredCurrency} {Math.abs(netSavings).toLocaleString("es-AR", { minimumFractionDigits: 0 })}.
+                            <strong className="text-rose-700 dark:text-rose-400 font-extrabold">Alerta de presupuesto</strong>: tus gastos superaron tus ingresos por <span className="font-mono tabular-nums"><MaskedValue value={formatCurrency(Math.abs(netSavings), preferredCurrency)} /></span>.
                         </>
                     )}
                 </div>

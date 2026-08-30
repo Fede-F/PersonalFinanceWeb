@@ -16,6 +16,7 @@ import { History, Trash2, ArrowDownLeft, ArrowUpRight, Link2, Loader2, Edit3, Fi
 import { deleteInvestmentTransaction } from "@/app/actions/investments"
 import { EditInvestmentModal, EditTransactionData } from "./edit-investment-modal"
 import { MaskedValue } from "@/components/privacy-provider"
+import { formatCurrency, formatQuantity } from "@/lib/formatters"
 import { triggerHaptic } from "@/lib/haptics"
 import { toast } from "sonner"
 
@@ -41,12 +42,12 @@ interface InvestmentHistoryProps {
 }
 
 const TYPE_COLORS: Record<string, string> = {
-    CRYPTO: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
-    STOCK: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
-    ETF: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
-    CEDEAR: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
-    BOND: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20",
-    OTHER: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/20",
+    CRYPTO: "bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/30",
+    STOCK: "bg-blue-500/15 text-blue-800 dark:text-blue-300 border-blue-500/30",
+    ETF: "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/30",
+    CEDEAR: "bg-purple-500/15 text-purple-800 dark:text-purple-300 border-purple-500/30",
+    BOND: "bg-cyan-500/15 text-cyan-800 dark:text-cyan-300 border-cyan-500/30",
+    OTHER: "bg-zinc-500/15 text-zinc-800 dark:text-zinc-300 border-zinc-500/30",
 }
 
 const PAGE_SIZE = 15
@@ -108,20 +109,6 @@ export function InvestmentHistory({
             }
         }
     }, [filteredTxs.length, visibleCount])
-
-    const formatCurrency = (val: number, curr = baseCurrency) => {
-        return new Intl.NumberFormat("es-AR", {
-            style: "currency",
-            currency: curr,
-            maximumFractionDigits: curr === "USD" ? 2 : 0,
-        }).format(val)
-    }
-
-    const formatQuantity = (qty: number) => {
-        if (qty >= 100) return qty.toLocaleString("es-AR", { maximumFractionDigits: 2 })
-        if (qty >= 1) return qty.toLocaleString("es-AR", { maximumFractionDigits: 4 })
-        return qty.toLocaleString("es-AR", { maximumFractionDigits: 8 })
-    }
 
     const handleDelete = async () => {
         if (!selectedTx) return
@@ -211,8 +198,8 @@ export function InvestmentHistory({
                                             <div
                                                 className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
                                                     isBuy
-                                                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                                                        : "bg-rose-500/10 text-rose-600 dark:text-rose-400"
+                                                        ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+                                                        : "bg-rose-500/15 text-rose-700 dark:text-rose-400"
                                                 }`}
                                             >
                                                 {isBuy ? (
@@ -229,10 +216,10 @@ export function InvestmentHistory({
                                                     </span>
                                                     <Badge
                                                         variant="outline"
-                                                        className={`text-[9px] px-1.5 py-0 font-normal ${
+                                                        className={`text-[9px] px-1.5 py-0 font-semibold ${
                                                             isBuy
-                                                                ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
-                                                                : "bg-rose-500/10 text-rose-600 border-rose-500/20"
+                                                                ? "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/30"
+                                                                : "bg-rose-500/15 text-rose-800 dark:text-rose-300 border-rose-500/30"
                                                         }`}
                                                     >
                                                         {isBuy ? "Compra" : "Venta"}
@@ -246,8 +233,8 @@ export function InvestmentHistory({
                                                         </span>
                                                     )}
                                                 </div>
-                                                <div className="text-[11px] text-zinc-400 flex flex-wrap items-center gap-x-2">
-                                                    <span>{tx.date}</span>
+                                                <div className="text-[11px] text-zinc-400 flex flex-wrap items-center gap-x-2 font-mono tabular-nums">
+                                                    <span className="font-sans">{tx.date}</span>
                                                     <span>•</span>
                                                     <span>
                                                         {formatQuantity(tx.quantity)} {tx.symbol} @{" "}
@@ -269,7 +256,7 @@ export function InvestmentHistory({
                                         </div>
 
                                         <div className="flex items-center gap-2 shrink-0">
-                                            <div className="text-right mr-1">
+                                            <div className="text-right mr-1 font-mono tabular-nums">
                                                 <div className="font-bold text-xs sm:text-sm text-zinc-900 dark:text-zinc-50">
                                                     <MaskedValue value={formatCurrency(tx.totalAmount, tx.currency)} />
                                                 </div>
@@ -282,7 +269,7 @@ export function InvestmentHistory({
                                                     triggerHaptic("light")
                                                     setEditingTx(tx as any)
                                                 }}
-                                                className="h-8 w-8 text-zinc-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 active:scale-90 touch-manipulation"
+                                                className="h-8 w-8 text-zinc-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 active:scale-90 touch-manipulation cursor-pointer"
                                                 title="Editar operación"
                                             >
                                                 <Edit3 className="w-3.5 h-3.5" />
@@ -295,7 +282,7 @@ export function InvestmentHistory({
                                                     triggerHaptic("light")
                                                     setSelectedTx(tx)
                                                 }}
-                                                className="h-8 w-8 text-zinc-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 active:scale-90 touch-manipulation"
+                                                className="h-8 w-8 text-zinc-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 active:scale-90 touch-manipulation cursor-pointer"
                                                 title="Eliminar operación"
                                             >
                                                 <Trash2 className="w-3.5 h-3.5" />

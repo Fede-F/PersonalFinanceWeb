@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card"
 import { EditTransactionModal } from "./edit-transaction-modal"
 import { DeleteTransactionDialog } from "./delete-transaction-dialog"
 import { MaskedValue } from "./privacy-provider"
+import { formatCurrency } from "@/lib/formatters"
 import {
     DropdownMenu,
     DropdownMenuTrigger,
@@ -136,21 +137,21 @@ export function ActivityList({
                                 <div className="flex items-start gap-2 sm:gap-3 shrink-0">
                                     <div className="text-right" suppressHydrationWarning>
                                         <p className={cn(
-                                            "font-black text-sm sm:text-lg tabular-nums leading-none",
-                                            tx.type === 'INCOME' ? "text-emerald-600" :
-                                            tx.type === 'EXPENSE' ? "text-rose-600" :
+                                            "font-black text-sm sm:text-base font-mono tabular-nums leading-none",
+                                            tx.type === 'INCOME' ? "text-emerald-700 dark:text-emerald-400" :
+                                            tx.type === 'EXPENSE' ? "text-rose-700 dark:text-rose-400" :
                                             "text-zinc-900 dark:text-zinc-100"
                                         )}>
-                                            <MaskedValue value={`${tx.type === 'INCOME' ? '+' : '-'}${tx.currency} ${parseFloat(tx.amount).toLocaleString("es-AR")}`} />
+                                            <MaskedValue value={`${tx.type === 'INCOME' ? '+' : '-'}${formatCurrency(parseFloat(tx.amount), tx.currency)}`} />
                                         </p>
                                         {tx.currency !== preferredCurrency && (
-                                            <p className="text-[9px] sm:text-[10px] text-zinc-400 font-bold uppercase tracking-tighter mt-1 leading-none">
-                                                ≈ <MaskedValue value={`${preferredCurrency} ${tx.amountInPreferred.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`} />
+                                            <p className="text-[9px] sm:text-[10px] text-zinc-400 font-bold uppercase tracking-tighter mt-1 leading-none font-mono tabular-nums">
+                                                ≈ <MaskedValue value={formatCurrency(tx.amountInPreferred, preferredCurrency)} />
                                             </p>
                                         )}
                                         {tx.currency !== "USD" && preferredCurrency !== "USD" && (
-                                            <p className="text-[9px] sm:text-[10px] text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-tighter mt-1 leading-none">
-                                                ≈ <MaskedValue value={`USD ${tx.amountInUSD.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`} />
+                                            <p className="text-[9px] sm:text-[10px] text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-tighter mt-1 leading-none font-mono tabular-nums">
+                                                ≈ <MaskedValue value={formatCurrency(tx.amountInUSD, "USD")} />
                                             </p>
                                         )}
                                     </div>

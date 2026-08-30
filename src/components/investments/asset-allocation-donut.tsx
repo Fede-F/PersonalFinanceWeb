@@ -6,6 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { PieChart as PieIcon } from "lucide-react"
 import { useInvestmentCurrency } from "./investment-currency-provider"
 import { MaskedValue } from "@/components/privacy-provider"
+import { formatCurrency } from "@/lib/formatters"
 import { triggerHaptic } from "@/lib/haptics"
 
 interface AllocationItem {
@@ -43,14 +44,6 @@ export function AssetAllocationDonut({
     const { isUSD } = useInvestmentCurrency()
     const activeCurrency = isUSD ? "USD" : baseCurrency
     const [viewMode, setViewMode] = React.useState<"category" | "asset">("category")
-
-    const formatCurrency = (val: number, curr = activeCurrency) => {
-        return new Intl.NumberFormat("es-AR", {
-            style: "currency",
-            currency: curr,
-            maximumFractionDigits: 0,
-        }).format(val)
-    }
 
     const currentData = viewMode === "category"
         ? categoryAllocation.map((c) => ({

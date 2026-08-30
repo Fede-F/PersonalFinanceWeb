@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button"
 import { TrendingUp, TrendingDown, Activity } from "lucide-react"
 import { useInvestmentCurrency } from "./investment-currency-provider"
 import { MaskedValue } from "@/components/privacy-provider"
+import { formatCurrency } from "@/lib/formatters"
 import { triggerHaptic } from "@/lib/haptics"
 
 interface ChartPoint {
@@ -69,14 +70,6 @@ export function PortfolioChart({
     const displayPnLAmount = isUSD ? totalPnLAmountUSD : totalPnLAmount
     const displayPnLPct = isUSD ? totalPnLPctUSD : totalPnLPct
     const isPositive = displayPnLAmount >= 0
-
-    const formatCurrency = (val: number, curr = activeCurrency) => {
-        return new Intl.NumberFormat("es-AR", {
-            style: "currency",
-            currency: curr,
-            maximumFractionDigits: 0,
-        }).format(val)
-    }
 
     const formatDate = (dateStr: string) => {
         if (!dateStr) return ""

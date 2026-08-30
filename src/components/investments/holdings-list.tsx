@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { HoldingPosition } from "@/app/actions/investments"
 import { MaskedValue } from "@/components/privacy-provider"
 import { useInvestmentCurrency } from "./investment-currency-provider"
+import { formatCurrency, formatQuantity, formatPercentage } from "@/lib/formatters"
 import { triggerHaptic } from "@/lib/haptics"
 import { TrendingUp, TrendingDown, Coins, Briefcase, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
 
@@ -15,21 +16,21 @@ interface HoldingsListProps {
 }
 
 const TYPE_COLORS: Record<string, string> = {
-    CRYPTO: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
-    STOCK: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
-    ETF: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
-    CEDEAR: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
-    BOND: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20",
-    OTHER: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/20",
+    CRYPTO: "bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/30",
+    STOCK: "bg-blue-500/15 text-blue-800 dark:text-blue-300 border-blue-500/30",
+    ETF: "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/30",
+    CEDEAR: "bg-purple-500/15 text-purple-800 dark:text-purple-300 border-purple-500/30",
+    BOND: "bg-cyan-500/15 text-cyan-800 dark:text-cyan-300 border-cyan-500/30",
+    OTHER: "bg-zinc-500/15 text-zinc-800 dark:text-zinc-300 border-zinc-500/30",
 }
 
 const TYPE_AVATAR_COLORS: Record<string, string> = {
-    CRYPTO: "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30",
-    STOCK: "bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30",
-    ETF: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30",
-    CEDEAR: "bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30",
-    BOND: "bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border-cyan-500/30",
-    OTHER: "bg-zinc-500/15 text-zinc-600 dark:text-zinc-400 border-zinc-500/30",
+    CRYPTO: "bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/30",
+    STOCK: "bg-blue-500/15 text-blue-800 dark:text-blue-300 border-blue-500/30",
+    ETF: "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/30",
+    CEDEAR: "bg-purple-500/15 text-purple-800 dark:text-purple-300 border-purple-500/30",
+    BOND: "bg-cyan-500/15 text-cyan-800 dark:text-cyan-300 border-cyan-500/30",
+    OTHER: "bg-zinc-500/15 text-zinc-800 dark:text-zinc-300 border-zinc-500/30",
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -44,7 +45,7 @@ const TYPE_LABELS: Record<string, string> = {
 type SortField = "symbol" | "quantity" | "avgBuyPrice" | "currentPrice" | "currentValue" | "pnl"
 
 export function HoldingsList({ holdings, baseCurrency }: HoldingsListProps) {
-    const { isUSD } = useInvestmentCurrency()
+    const { isUSD, selectedCurrency } = useInvestmentCurrency()
     const activeCurrency = isUSD ? "USD" : baseCurrency
 
     const [sortField, setSortField] = React.useState<SortField>("currentValue")
@@ -80,20 +81,6 @@ export function HoldingsList({ holdings, baseCurrency }: HoldingsListProps) {
             return sortDirection === "asc" ? res : -res
         })
     }, [holdings, sortField, sortDirection, isUSD])
-
-    const formatCurrency = (val: number, curr = activeCurrency) => {
-        return new Intl.NumberFormat("es-AR", {
-            style: "currency",
-            currency: curr,
-            maximumFractionDigits: curr === "USD" ? 2 : 0,
-        }).format(val)
-    }
-
-    const formatQuantity = (qty: number) => {
-        if (qty >= 100) return qty.toLocaleString("es-AR", { maximumFractionDigits: 2 })
-        if (qty >= 1) return qty.toLocaleString("es-AR", { maximumFractionDigits: 4 })
-        return qty.toLocaleString("es-AR", { maximumFractionDigits: 8 })
-    }
 
     if (holdings.length === 0) {
         return (
@@ -202,7 +189,7 @@ export function HoldingsList({ holdings, baseCurrency }: HoldingsListProps) {
                                                         </span>
                                                         <Badge
                                                             variant="outline"
-                                                            className={`text-[9px] px-1.5 py-0 font-normal ${
+                                                            className={`text-[9px] px-1.5 py-0 font-semibold ${
                                                                 TYPE_COLORS[h.assetType] || TYPE_COLORS.OTHER
                                                             }`}
                                                         >
@@ -216,21 +203,21 @@ export function HoldingsList({ holdings, baseCurrency }: HoldingsListProps) {
                                             </div>
                                         </td>
 
-                                        <td className="px-4 py-4 text-right font-medium text-zinc-800 dark:text-zinc-200">
+                                        <td className="px-4 py-4 text-right font-mono tabular-nums text-zinc-800 dark:text-zinc-200">
                                             {formatQuantity(h.quantity)}
                                         </td>
 
-                                        <td className="px-4 py-4 text-right font-medium text-zinc-500 dark:text-zinc-400">
+                                        <td className="px-4 py-4 text-right font-mono tabular-nums text-zinc-500 dark:text-zinc-400">
                                             <MaskedValue value={formatCurrency(h.avgBuyPrice, baseCurrency)} />
                                         </td>
 
-                                        <td className="px-4 py-4 text-right font-medium text-zinc-800 dark:text-zinc-200">
+                                        <td className="px-4 py-4 text-right font-mono tabular-nums text-zinc-800 dark:text-zinc-200">
                                             <div className="flex flex-col items-end">
                                                 <span><MaskedValue value={formatCurrency(h.currentPrice, baseCurrency)} /></span>
                                                 {h.change24hPct !== undefined && (
                                                     <span
-                                                        className={`text-[10px] font-semibold ${
-                                                            h.change24hPct >= 0 ? "text-emerald-500" : "text-rose-500"
+                                                        className={`text-[10px] font-bold ${
+                                                            h.change24hPct >= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400"
                                                         }`}
                                                     >
                                                         {h.change24hPct >= 0 ? "+" : ""}
@@ -240,15 +227,15 @@ export function HoldingsList({ holdings, baseCurrency }: HoldingsListProps) {
                                             </div>
                                         </td>
 
-                                        <td className="px-4 py-4 text-right font-bold text-zinc-900 dark:text-zinc-100 text-sm">
+                                        <td className="px-4 py-4 text-right font-bold font-mono tabular-nums text-zinc-900 dark:text-zinc-100 text-sm">
                                             <MaskedValue value={formatCurrency(currentVal, activeCurrency)} />
                                         </td>
 
-                                        <td className="px-6 py-4 text-right">
+                                        <td className="px-6 py-4 text-right font-mono tabular-nums">
                                             <div className="flex flex-col items-end">
                                                 <div
                                                     className={`inline-flex items-center gap-1 font-bold text-xs sm:text-sm ${
-                                                        isPositive ? "text-emerald-500" : "text-rose-500"
+                                                        isPositive ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400"
                                                     }`}
                                                 >
                                                     {isPositive ? (
@@ -262,8 +249,8 @@ export function HoldingsList({ holdings, baseCurrency }: HoldingsListProps) {
                                                     </span>
                                                 </div>
                                                 <span
-                                                    className={`text-[11px] font-semibold ${
-                                                        isPositive ? "text-emerald-500/80" : "text-rose-500/80"
+                                                    className={`text-[11px] font-bold ${
+                                                        isPositive ? "text-emerald-700/80 dark:text-emerald-400/80" : "text-rose-700/80 dark:text-rose-400/80"
                                                     }`}
                                                 >
                                                     {isPositive ? "+" : ""}
@@ -300,7 +287,7 @@ export function HoldingsList({ holdings, baseCurrency }: HoldingsListProps) {
                                                 </span>
                                                 <Badge
                                                     variant="outline"
-                                                    className={`text-[9px] px-1 py-0 font-normal ${
+                                                    className={`text-[9px] px-1 py-0 font-semibold ${
                                                         TYPE_COLORS[h.assetType] || TYPE_COLORS.OTHER
                                                     }`}
                                                 >
@@ -314,10 +301,10 @@ export function HoldingsList({ holdings, baseCurrency }: HoldingsListProps) {
                                     </div>
 
                                     <div className="text-right">
-                                        <div className="font-extrabold text-sm text-zinc-900 dark:text-zinc-50">
+                                        <div className="font-extrabold text-sm text-zinc-900 dark:text-zinc-50 font-mono tabular-nums">
                                             <MaskedValue value={formatCurrency(currentVal, activeCurrency)} />
                                         </div>
-                                        <span className="text-[11px] text-zinc-400 font-medium">
+                                        <span className="text-[11px] text-zinc-400 font-medium font-mono tabular-nums">
                                             {formatQuantity(h.quantity)} {h.symbol}
                                         </span>
                                     </div>
@@ -326,21 +313,21 @@ export function HoldingsList({ holdings, baseCurrency }: HoldingsListProps) {
                                 <div className="grid grid-cols-3 gap-2 p-2.5 bg-zinc-50 dark:bg-zinc-800/40 rounded-xl text-center text-xs">
                                     <div>
                                         <span className="text-[10px] text-zinc-400 uppercase font-medium block">Precio Prom.</span>
-                                        <span className="font-bold text-zinc-700 dark:text-zinc-300">
+                                        <span className="font-bold font-mono tabular-nums text-zinc-700 dark:text-zinc-300">
                                             <MaskedValue value={formatCurrency(h.avgBuyPrice, baseCurrency)} />
                                         </span>
                                     </div>
                                     <div>
                                         <span className="text-[10px] text-zinc-400 uppercase font-medium block">Mercado</span>
-                                        <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                                        <span className="font-bold font-mono tabular-nums text-zinc-800 dark:text-zinc-200">
                                             <MaskedValue value={formatCurrency(h.currentPrice, baseCurrency)} />
                                         </span>
                                     </div>
                                     <div>
                                         <span className="text-[10px] text-zinc-400 uppercase font-medium block">Rendimiento</span>
                                         <span
-                                            className={`font-bold flex items-center justify-center gap-0.5 ${
-                                                isPositive ? "text-emerald-500" : "text-rose-500"
+                                            className={`font-bold font-mono tabular-nums flex items-center justify-center gap-0.5 ${
+                                                isPositive ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400"
                                             }`}
                                         >
                                             {isPositive ? "+" : ""}
