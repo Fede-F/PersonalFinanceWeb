@@ -132,24 +132,120 @@ async function fetchStockPrices(symbols: string[]): Promise<AssetPriceInfo[]> {
 }
 
 export const KNOWN_FCI_TICKERS: Record<string, string> = {
-    DFSACCA: "Delta Select - Clase A",
-    DFSACCB: "Delta Select - Clase B",
-    RJMULIA: "RJ Delta Multimercado - Clase A",
-    RJMULIB: "RJ Delta Multimercado - Clase B",
+    // Delta / CMA
+    DFSACCA: "CMA Acciones - Clase A",
+    DFSACCB: "CMA Acciones - Clase B",
     DELACCA: "Delta Acciones - Clase A",
     DELACCB: "Delta Acciones - Clase B",
     DELAHPA: "Delta Ahorro Plus - Clase A",
     DELAHOA: "Delta Ahorro - Clase A",
+    RJMULIA: "RJ Delta Multimercado - Clase A",
+    RJMULIB: "RJ Delta Multimercado - Clase B",
+    DELDOAA: "Delta Dólares - Clase A",
+    DELPYMA: "Delta Empresas Argentinas Pymes - Clase A",
+    DELFEDA: "Delta Federal I - Clase A",
+    CMARVA: "CMA Renta Variable - Clase A",
+    CMARVB: "CMA Renta Variable - Clase B",
+    CMAACCA: "CMA Acciones - Clase A",
+
+    // FIMA (Banco Galicia)
     FIMPREA: "Fima Premium - Clase A",
     FIMPREB: "Fima Premium - Clase B",
+    FIMABBA: "Fima Ahorro Pesos - Clase A",
+    FIMMIXA: "Fima Mix I - Clase A",
+    FIMACCA: "Fima Acciones - Clase A",
+    FIMRFAA: "Fima Renta Fija - Clase A",
+    FIMPBPA: "Fima PB Pesos - Clase A",
+
+    // Balanz
     BALACCA: "Balanz Acciones - Clase A",
+    BALACCB: "Balanz Acciones - Clase B",
     BALEQSA: "Balanz Equity Selection - Clase A",
+    BALEQSB: "Balanz Equity Selection - Clase B",
+    BALAHRA: "Balanz Ahorro - Clase A",
+    BALCAPA: "Balanz Capital - Clase A",
+    BALINFA: "Balanz Inflación - Clase A",
+    BALMMCA: "Balanz Money Market - Clase A",
+    BALRFAA: "Balanz Renta Fija - Clase A",
+
+    // Galileo
     GALACCA: "Galileo Acciones - Clase A",
+    GALACCB: "Galileo Acciones - Clase B",
     GALAHRA: "Galileo Ahorro - Clase A",
+    GALINFA: "Galileo Inflación - Clase A",
+    GALENGA: "Galileo Event Driven - Clase A",
+    GALMMCA: "Galileo Money Market - Clase A",
+
+    // Consultatio
     CONAHRA: "Consultatio Ahorro Plus - Clase A",
     CONACCA: "Consultatio Acciones Argentina - Clase A",
+    CONDEBA: "Consultatio Deuda Argentina - Clase A",
+    CONRENA: "Consultatio Renta Fija - Clase A",
+
+    // SBS
     SBSACCA: "SBS Acciones Argentina - Clase A",
+    SBSAHRA: "SBS Ahorro Pesos - Clase A",
+    SBSRFAA: "SBS Renta Fija - Clase A",
+
+    // Schroders
     SCHPREA: "Schroders Argentina - Clase A",
+    SCHRENA: "Schroders Renta Fija - Clase A",
+    SCHACCA: "Schroders Renta Variable - Clase A",
+
+    // Quinquela
+    QUINACCA: "Quinquela Acciones - Clase A",
+    QUINAHOA: "Quinquela Ahorro - Clase A",
+
+    // Allaria
+    ALLACCA: "Allaria Acciones - Clase A",
+    ALLAHRA: "Allaria Ahorro - Clase A",
+
+    // Santander (Supergestión)
+    STNACCA: "Super Fondo Acciones - Clase A",
+    STNPREA: "Super Fondo Premium - Clase A",
+
+    // Macro (Pellegrini)
+    PMPACCA: "Pellegrini Acciones - Clase A",
+    PMPAHRA: "Pellegrini Renta Fija - Clase A",
+
+    // Mariva
+    MARACCA: "Mariva Acciones - Clase A",
+    MARAHRA: "Mariva Ahorro - Clase A",
+
+    // AdCap
+    ADCAPA: "AdCap Acciones - Clase A",
+    ADCAHOR: "AdCap Ahorro Plus - Clase A",
+}
+
+export function formatFciTicker(fondoName: string): string {
+    const parts = fondoName.split(" - ")
+    const mainName = parts[0] || fondoName
+    const classPart = parts[1] || ""
+
+    const classMatch = classPart.match(/Clase\s+([A-Za-z0-9]+)/i)
+    const classCode = classMatch ? classMatch[1].toUpperCase() : ""
+
+    const words = mainName.replace(/[^A-Za-z0-9\s]/g, "").split(/\s+/).filter(Boolean)
+    let tickerPrefix = ""
+    if (words.length === 1) {
+        tickerPrefix = words[0].slice(0, 6).toUpperCase()
+    } else if (words.length === 2) {
+        tickerPrefix = `${words[0].slice(0, 4).toUpperCase()}-${words[1].slice(0, 4).toUpperCase()}`
+    } else {
+        tickerPrefix = `${words[0].slice(0, 3).toUpperCase()}-${words.slice(1).map((w) => w.slice(0, 3).toUpperCase()).join("-")}`
+    }
+
+    return classCode ? `${tickerPrefix}-${classCode}` : tickerPrefix
+}
+
+export function resolveFciSymbol(fondoName: string): string {
+    const upperFondo = fondoName.toUpperCase()
+    for (const [ticker, name] of Object.entries(KNOWN_FCI_TICKERS)) {
+        if (upperFondo.includes(name.toUpperCase()) || name.toUpperCase().includes(upperFondo)) {
+            return ticker
+        }
+    }
+    return formatFciTicker(fondoName)
 }
 
 interface FciItem {
@@ -215,6 +311,7 @@ async function fetchFciPrices(symbols: string[]): Promise<AssetPriceInfo[]> {
 
         const match = catalog.find((f) => {
             if (knownName && f.fondo.toUpperCase().includes(knownName.toUpperCase())) return true
+            if (resolveFciSymbol(f.fondo).toUpperCase() === upperSym) return true
             if (f.fondo.toUpperCase() === upperSym) return true
             if (f.fondo.toUpperCase().replace(/[^A-Z0-9]/g, "").includes(upperSym.replace(/[^A-Z0-9]/g, ""))) return true
             return false
@@ -609,19 +706,18 @@ export async function searchOnlineMarketAssets(query: string): Promise<MarketSea
             const matchedFunds = catalog.filter((f) => {
                 const name = f.fondo.toUpperCase()
                 if (name.includes(upperQ)) return true
+                const sym = resolveFciSymbol(f.fondo).toUpperCase()
+                if (sym.includes(upperQ) || upperQ.includes(sym)) return true
                 for (const [ticker, fondoName] of Object.entries(KNOWN_FCI_TICKERS)) {
                     if ((ticker.includes(upperQ) || upperQ.includes(ticker)) && name.includes(fondoName.toUpperCase())) {
                         return true
                     }
                 }
                 return false
-            }).slice(0, 5)
+            }).slice(0, 8)
 
             for (const f of matchedFunds) {
-                let sym = Object.entries(KNOWN_FCI_TICKERS).find(([_, n]) => f.fondo.toUpperCase().includes(n.toUpperCase()))?.[0]
-                if (!sym) {
-                    sym = f.fondo.replace(/[^A-Za-z0-9]/g, "").slice(0, 10).toUpperCase()
-                }
+                const sym = resolveFciSymbol(f.fondo)
                 if (!seenSymbols.has(sym)) {
                     seenSymbols.add(sym)
                     results.push({
