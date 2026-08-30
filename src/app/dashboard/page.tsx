@@ -299,8 +299,8 @@ export default async function DashboardPage(props: {
                                     <CardDescription className="text-sm font-semibold">Gastos del Mes</CardDescription>
                                 </CardHeader>
                                 <CardContent className="p-0 mt-1">
-                                    <div className="text-2xl xl:text-3xl font-black text-rose-600 flex items-baseline gap-1.5 flex-wrap">
-                                        <span className="text-base xl:text-xl opacity-70 font-semibold">- {preferredCurrency}</span>
+                                    <div className="text-2xl xl:text-3xl font-black text-zinc-900 dark:text-zinc-50 flex items-baseline gap-1.5 flex-wrap">
+                                        <span className="text-base xl:text-xl text-rose-600 dark:text-rose-400 opacity-80 font-semibold">- {preferredCurrency}</span>
                                         <AnimatedNumber value={totalExpense} />
                                     </div>
                                     {preferredCurrency !== "USD" && (
@@ -384,8 +384,8 @@ export default async function DashboardPage(props: {
                                     <TrendingDown className="w-8 h-8 text-rose-500" />
                                 </div>
                                 <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400 leading-none">Gastos</span>
-                                <div className="text-xl xs:text-2xl font-black text-rose-600 flex items-baseline gap-0.5 flex-wrap mt-0.5 leading-none">
-                                    <span className="text-xs opacity-70 font-bold leading-none">-</span>
+                                <div className="text-xl xs:text-2xl font-black text-zinc-900 dark:text-zinc-50 flex items-baseline gap-0.5 flex-wrap mt-0.5 leading-none">
+                                    <span className="text-xs text-rose-600 dark:text-rose-400 opacity-80 font-bold leading-none">-</span>
                                     <AnimatedNumber value={totalExpense} />
                                 </div>
                                 {preferredCurrency !== "USD" && (

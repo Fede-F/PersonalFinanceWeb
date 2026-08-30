@@ -87,27 +87,27 @@ export function PortfolioChart({
             const pnlPct = iCost > 0 ? (pnl / iCost) * 100 : 0
 
             return (
-                <div className="bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm border border-zinc-200 dark:border-zinc-800 p-3 rounded-lg shadow-xl text-xs space-y-1.5 min-w-[180px]">
+                <div className="relative z-50 bg-white/98 dark:bg-zinc-900/98 backdrop-blur-md border border-zinc-200/90 dark:border-zinc-700/90 p-3 rounded-xl shadow-2xl text-xs space-y-1.5 min-w-[190px] select-none pointer-events-none">
                     <div className="font-medium text-zinc-500 dark:text-zinc-400 border-b border-zinc-100 dark:border-zinc-800 pb-1">
                         {data.date}
                     </div>
                     <div className="flex justify-between items-center pt-0.5">
                         <span className="text-zinc-500 dark:text-zinc-400">Valuación:</span>
-                        <span className="font-bold text-zinc-900 dark:text-zinc-50">
+                        <span className="font-bold font-mono tabular-nums text-zinc-900 dark:text-zinc-50">
                             <MaskedValue value={formatCurrency(pVal, activeCurrency)} />
                         </span>
                     </div>
                     <div className="flex justify-between items-center">
                         <span className="text-zinc-500 dark:text-zinc-400">Invertido:</span>
-                        <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                        <span className="font-medium font-mono tabular-nums text-zinc-700 dark:text-zinc-300">
                             <MaskedValue value={formatCurrency(iCost, activeCurrency)} />
                         </span>
                     </div>
-                    <div className="flex justify-between items-center border-t border-zinc-100 dark:border-zinc-800 pt-1">
-                        <span className="text-zinc-500 dark:text-zinc-400">Rendimiento:</span>
+                    <div className="flex justify-between items-center border-t border-zinc-100 dark:border-zinc-800 pt-1 font-mono tabular-nums">
+                        <span className="text-zinc-500 dark:text-zinc-400 font-sans">Rendimiento:</span>
                         <span
-                            className={`font-semibold ${
-                                pnl >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                            className={`font-bold ${
+                                pnl >= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400"
                             }`}
                         >
                             {pnl >= 0 ? "+" : ""}
@@ -225,7 +225,10 @@ export function PortfolioChart({
                                     axisLine={false}
                                     className="text-[10px] text-zinc-400"
                                 />
-                                <Tooltip content={<CustomTooltip />} />
+                                <Tooltip
+                                    wrapperStyle={{ zIndex: 1000, pointerEvents: "none" }}
+                                    content={<CustomTooltip />}
+                                />
                                 <Area
                                     type="monotone"
                                     dataKey="portfolioValue"

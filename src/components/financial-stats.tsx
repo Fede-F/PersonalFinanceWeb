@@ -63,10 +63,10 @@ export function ExpensesDistribution({ transactions, preferredCurrency }: StatsP
         if (active && payload && payload.length) {
             const data = payload[0].payload
             return (
-                <div className="bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm border border-zinc-200 dark:border-zinc-800 p-2.5 rounded-lg shadow-lg text-xs space-y-1">
+                <div className="relative z-50 bg-white/98 dark:bg-zinc-900/98 backdrop-blur-md border border-zinc-200/90 dark:border-zinc-700/90 p-2.5 rounded-xl shadow-2xl text-xs space-y-1 select-none pointer-events-none">
                     <div className="flex items-center gap-2 font-semibold text-zinc-900 dark:text-zinc-50">
-                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: data.color }} />
-                        {data.name}
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: data.color }} />
+                        <span className="truncate">{data.name}</span>
                     </div>
                     <div className="flex justify-between gap-4 text-zinc-500 dark:text-zinc-400">
                         <span>Monto:</span>
@@ -100,9 +100,20 @@ export function ExpensesDistribution({ transactions, preferredCurrency }: StatsP
                             </div>
                         ) : (
                             <>
-                                <ResponsiveContainer width="100%" height="100%">
+                                {/* Center label (z-0) */}
+                                <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-2 pointer-events-none z-0">
+                                    <span className="text-[9px] uppercase font-bold text-zinc-400 tracking-wider">Total</span>
+                                    <span className="text-xs sm:text-sm font-black text-zinc-800 dark:text-zinc-100 font-mono tabular-nums truncate max-w-[100px]">
+                                        <MaskedValue value={formatCurrency(totalExpenses, preferredCurrency)} />
+                                    </span>
+                                </div>
+
+                                <ResponsiveContainer width="100%" height="100%" className="relative z-10">
                                     <PieChart>
-                                        <Tooltip content={<CustomTooltip />} />
+                                        <Tooltip
+                                            wrapperStyle={{ zIndex: 1000, pointerEvents: "none" }}
+                                            content={<CustomTooltip />}
+                                        />
                                         <Pie
                                             data={categoriesWithPct}
                                             cx="50%"
@@ -118,12 +129,6 @@ export function ExpensesDistribution({ transactions, preferredCurrency }: StatsP
                                         </Pie>
                                     </PieChart>
                                 </ResponsiveContainer>
-                                <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-2 pointer-events-none">
-                                    <span className="text-[9px] uppercase font-bold text-zinc-400 tracking-wider">Total</span>
-                                    <span className="text-xs sm:text-sm font-black text-zinc-800 dark:text-zinc-100 font-mono tabular-nums truncate max-w-[100px]">
-                                        <MaskedValue value={formatCurrency(totalExpenses, preferredCurrency)} />
-                                    </span>
-                                </div>
                             </>
                         )}
                     </div>

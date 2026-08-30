@@ -88,9 +88,9 @@ export function ActivityList({
                         recentTransactions.map((tx) => (                            
                             <div key={tx.id} className="p-4 flex items-start sm:items-center gap-3 sm:gap-4 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors group">
                                 <div className={cn(
-                                    "w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center transition-transform group-hover:scale-105 shadow-sm shrink-0",
-                                    tx.type === 'INCOME' ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10" :
-                                    tx.type === 'EXPENSE' ? "bg-rose-50 text-rose-600 dark:bg-rose-500/10" :
+                                    "w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center transition-transform group-hover:scale-105 shadow-2xs shrink-0",
+                                    tx.type === 'INCOME' ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" :
+                                    tx.type === 'EXPENSE' ? "bg-rose-500/10 text-rose-600 dark:text-rose-400/90" :
                                     "bg-zinc-100 text-zinc-600 dark:bg-zinc-800"
                                 )}>
                                     {tx.type === 'INCOME' ? <Plus className="w-5 h-5 sm:w-6 sm:h-6" /> :
@@ -137,9 +137,9 @@ export function ActivityList({
                                 <div className="flex items-start gap-2 sm:gap-3 shrink-0">
                                     <div className="text-right" suppressHydrationWarning>
                                         <p className={cn(
-                                            "font-black text-sm sm:text-base font-mono tabular-nums leading-none",
-                                            tx.type === 'INCOME' ? "text-emerald-700 dark:text-emerald-400" :
-                                            tx.type === 'EXPENSE' ? "text-rose-700 dark:text-rose-400" :
+                                            "font-bold text-sm sm:text-base font-mono tabular-nums leading-none",
+                                            tx.type === 'INCOME' ? "text-emerald-700 dark:text-emerald-400 font-extrabold" :
+                                            tx.type === 'EXPENSE' ? "text-zinc-800 dark:text-zinc-200" :
                                             "text-zinc-900 dark:text-zinc-100"
                                         )}>
                                             <MaskedValue value={`${tx.type === 'INCOME' ? '+' : '-'}${formatCurrency(parseFloat(tx.amount), tx.currency)}`} />
