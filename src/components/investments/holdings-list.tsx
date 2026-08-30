@@ -168,8 +168,11 @@ export function HoldingsList({ holdings, baseCurrency }: HoldingsListProps) {
                         <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
                             {sortedHoldings.map((h) => {
                                 const pnl = isUSD ? h.unrealizedPnLUSD : h.unrealizedPnLBaseCurrency
+                                const pnlPct = isUSD ? (h.unrealizedPnLPctUSD ?? h.unrealizedPnLPct) : h.unrealizedPnLPct
                                 const isPositive = pnl >= 0
                                 const currentVal = isUSD ? h.currentValueInUSD : h.currentValueInBaseCurrency
+                                const avgBuyPrice = isUSD ? (h.avgBuyPriceUSD ?? h.avgBuyPrice) : h.avgBuyPrice
+                                const currentPrice = isUSD ? (h.currentPriceUSD ?? h.currentPrice) : h.currentPrice
                                 const avatarColor = TYPE_AVATAR_COLORS[h.assetType] || TYPE_AVATAR_COLORS.OTHER
 
                                 return (
@@ -208,12 +211,12 @@ export function HoldingsList({ holdings, baseCurrency }: HoldingsListProps) {
                                         </td>
 
                                         <td className="px-4 py-4 text-right font-mono tabular-nums text-zinc-500 dark:text-zinc-400">
-                                            <MaskedValue value={formatCurrency(h.avgBuyPrice, baseCurrency)} />
+                                            <MaskedValue value={formatCurrency(avgBuyPrice, activeCurrency)} />
                                         </td>
 
                                         <td className="px-4 py-4 text-right font-mono tabular-nums text-zinc-800 dark:text-zinc-200">
                                             <div className="flex flex-col items-end">
-                                                <span><MaskedValue value={formatCurrency(h.currentPrice, baseCurrency)} /></span>
+                                                <span><MaskedValue value={formatCurrency(currentPrice, activeCurrency)} /></span>
                                                 {h.change24hPct !== undefined && (
                                                     <span
                                                         className={`text-[10px] font-bold ${
@@ -254,7 +257,7 @@ export function HoldingsList({ holdings, baseCurrency }: HoldingsListProps) {
                                                     }`}
                                                 >
                                                     {isPositive ? "+" : ""}
-                                                    {h.unrealizedPnLPct.toFixed(2)}%
+                                                    {pnlPct.toFixed(2)}%
                                                 </span>
                                             </div>
                                         </td>
@@ -269,8 +272,11 @@ export function HoldingsList({ holdings, baseCurrency }: HoldingsListProps) {
                 <div className="block lg:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
                     {sortedHoldings.map((h) => {
                         const pnl = isUSD ? h.unrealizedPnLUSD : h.unrealizedPnLBaseCurrency
+                        const pnlPct = isUSD ? (h.unrealizedPnLPctUSD ?? h.unrealizedPnLPct) : h.unrealizedPnLPct
                         const isPositive = pnl >= 0
                         const currentVal = isUSD ? h.currentValueInUSD : h.currentValueInBaseCurrency
+                        const avgBuyPrice = isUSD ? (h.avgBuyPriceUSD ?? h.avgBuyPrice) : h.avgBuyPrice
+                        const currentPrice = isUSD ? (h.currentPriceUSD ?? h.currentPrice) : h.currentPrice
                         const avatarColor = TYPE_AVATAR_COLORS[h.assetType] || TYPE_AVATAR_COLORS.OTHER
 
                         return (
@@ -314,13 +320,13 @@ export function HoldingsList({ holdings, baseCurrency }: HoldingsListProps) {
                                     <div>
                                         <span className="text-[10px] text-zinc-400 uppercase font-medium block">Precio Prom.</span>
                                         <span className="font-bold font-mono tabular-nums text-zinc-700 dark:text-zinc-300">
-                                            <MaskedValue value={formatCurrency(h.avgBuyPrice, baseCurrency)} />
+                                            <MaskedValue value={formatCurrency(avgBuyPrice, activeCurrency)} />
                                         </span>
                                     </div>
                                     <div>
                                         <span className="text-[10px] text-zinc-400 uppercase font-medium block">Mercado</span>
                                         <span className="font-bold font-mono tabular-nums text-zinc-800 dark:text-zinc-200">
-                                            <MaskedValue value={formatCurrency(h.currentPrice, baseCurrency)} />
+                                            <MaskedValue value={formatCurrency(currentPrice, activeCurrency)} />
                                         </span>
                                     </div>
                                     <div>
@@ -331,7 +337,7 @@ export function HoldingsList({ holdings, baseCurrency }: HoldingsListProps) {
                                             }`}
                                         >
                                             {isPositive ? "+" : ""}
-                                            {h.unrealizedPnLPct.toFixed(1)}%
+                                            {pnlPct.toFixed(1)}%
                                         </span>
                                     </div>
                                 </div>

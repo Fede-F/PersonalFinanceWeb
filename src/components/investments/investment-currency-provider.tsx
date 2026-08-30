@@ -8,6 +8,7 @@ interface InvestmentCurrencyContextType {
     setSelectedCurrency: (c: string) => void
     baseCurrency: string
     localCurrency: string
+    activeCurrency: string
     isUSD: boolean
 }
 
@@ -16,6 +17,7 @@ const InvestmentCurrencyContext = React.createContext<InvestmentCurrencyContextT
     setSelectedCurrency: () => {},
     baseCurrency: "USD",
     localCurrency: "ARS",
+    activeCurrency: "USD",
     isUSD: true,
 })
 
@@ -48,6 +50,7 @@ export function InvestmentCurrencyProvider({
     }, [])
 
     const isUSD = mounted ? selectedCurrency === "USD" : selectedCurrency === "USD"
+    const activeCurrency = isUSD ? "USD" : (baseCurrency || "ARS")
 
     return (
         <InvestmentCurrencyContext.Provider
@@ -56,6 +59,7 @@ export function InvestmentCurrencyProvider({
                 setSelectedCurrency,
                 baseCurrency,
                 localCurrency,
+                activeCurrency,
                 isUSD,
             }}
         >

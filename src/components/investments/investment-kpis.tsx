@@ -70,7 +70,7 @@ export function InvestmentKPIs({
                         </div>
                         {localCurrency !== "USD" && (
                             <div className="text-xs text-zinc-400 mt-0.5 font-mono tabular-nums">
-                                ≈ <MaskedValue value={formatCurrency(secondaryTotalValue, secondaryCurrency)} />
+                                ≈ <MaskedValue value={formatCurrency(secondaryTotalValue, secondaryCurrency)} /> {secondaryCurrency}
                             </div>
                         )}
                     </div>
@@ -112,7 +112,7 @@ export function InvestmentKPIs({
                             </span>
                             {localCurrency !== "USD" && (
                                 <span className="text-xs text-zinc-400">
-                                    (≈ <MaskedValue value={`${secondaryPnLAmount >= 0 ? "+" : ""}${formatCurrency(secondaryPnLAmount, secondaryCurrency)}`} />)
+                                    (≈ <MaskedValue value={`${secondaryPnLAmount >= 0 ? "+" : ""}${formatCurrency(secondaryPnLAmount, secondaryCurrency)}`} /> {secondaryCurrency})
                                 </span>
                             )}
                         </div>
@@ -135,7 +135,7 @@ export function InvestmentKPIs({
                         </div>
                         {localCurrency !== "USD" && (
                             <div className="text-xs text-zinc-400 mt-0.5 font-mono tabular-nums">
-                                ≈ <MaskedValue value={formatCurrency(secondaryInvested, secondaryCurrency)} />
+                                ≈ <MaskedValue value={formatCurrency(secondaryInvested, secondaryCurrency)} /> {secondaryCurrency}
                             </div>
                         )}
                     </div>
@@ -176,7 +176,7 @@ export function InvestmentKPIs({
                         </div>
                         {localCurrency !== "USD" && (
                             <div className="text-[11px] text-zinc-400 font-mono tabular-nums">
-                                ≈ <MaskedValue value={formatCurrency(secondaryTotalValue, secondaryCurrency)} />
+                                ≈ <MaskedValue value={formatCurrency(secondaryTotalValue, secondaryCurrency)} /> {secondaryCurrency}
                             </div>
                         )}
                     </div>
@@ -216,7 +216,7 @@ export function InvestmentKPIs({
                             </span>
                             {localCurrency !== "USD" && (
                                 <span className="text-[10px] text-zinc-400 truncate">
-                                    (≈ <MaskedValue value={`${secondaryPnLAmount >= 0 ? "+" : ""}${formatCurrency(secondaryPnLAmount, secondaryCurrency)}`} />)
+                                    (≈ <MaskedValue value={`${secondaryPnLAmount >= 0 ? "+" : ""}${formatCurrency(secondaryPnLAmount, secondaryCurrency)}`} /> {secondaryCurrency})
                                 </span>
                             )}
                         </div>
@@ -237,7 +237,7 @@ export function InvestmentKPIs({
                         </div>
                         {localCurrency !== "USD" && (
                             <div className="text-[11px] text-zinc-400 font-mono tabular-nums">
-                                ≈ <MaskedValue value={formatCurrency(secondaryInvested, secondaryCurrency)} />
+                                ≈ <MaskedValue value={formatCurrency(secondaryInvested, secondaryCurrency)} /> {secondaryCurrency}
                             </div>
                         )}
                     </div>

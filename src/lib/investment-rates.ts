@@ -110,7 +110,8 @@ async function fetchStockPrices(symbols: string[]): Promise<AssetPriceInfo[]> {
                     change24hPct = ((currentPrice - previousClose) / previousClose) * 100
                 }
 
-                const currency = meta.currency || (symbol.endsWith(".BA") ? "ARS" : "USD")
+                const isBA = symbol.toUpperCase().endsWith(".BA")
+                const currency = isBA ? "ARS" : (meta?.currency?.toUpperCase() || "USD")
 
                 if (typeof currentPrice === "number" && !isNaN(currentPrice)) {
                     results.push({
@@ -179,7 +180,8 @@ export async function fetchHistoricalDailyPrices(symbol: string, days = 90): Pro
                 if (result) {
                     const timestamps: number[] = result.timestamp || []
                     const quotes = result.indicators?.quote?.[0]?.close || []
-                    const currency = (result.meta?.currency || (symbol.endsWith(".BA") ? "ARS" : "USD")).toUpperCase()
+                    const isBA = symbol.toUpperCase().endsWith(".BA")
+                    const currency = isBA ? "ARS" : (result.meta?.currency?.toUpperCase() || "USD")
 
                     for (let i = 0; i < timestamps.length; i++) {
                         const ts = timestamps[i]

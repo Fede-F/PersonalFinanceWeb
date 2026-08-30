@@ -28,6 +28,7 @@ export interface EditTransactionData {
     totalAmount: number
     currency: string
     fees: number
+    rawDate?: string
     date: string
     notes?: string | null
     linkedTransactionId?: string | null
@@ -63,7 +64,8 @@ export function EditInvestmentModal({
             setTotalAmount(transaction.totalAmount.toString())
             setCurrency(transaction.currency || "USD")
             setFees(transaction.fees ? transaction.fees.toString() : "0")
-            setDate(transaction.date.split("T")[0])
+            const initialDate = transaction.rawDate || (transaction.date?.includes("-") ? transaction.date.split("T")[0] : new Date().toISOString().split("T")[0])
+            setDate(initialDate)
             setNotes(transaction.notes || "")
         }
     }, [transaction])

@@ -15,6 +15,7 @@ import {
 import { History, Trash2, ArrowDownLeft, ArrowUpRight, Link2, Loader2, Edit3, Filter } from "lucide-react"
 import { deleteInvestmentTransaction } from "@/app/actions/investments"
 import { EditInvestmentModal, EditTransactionData } from "./edit-investment-modal"
+import { useInvestmentCurrency } from "./investment-currency-provider"
 import { MaskedValue } from "@/components/privacy-provider"
 import { formatCurrency, formatQuantity } from "@/lib/formatters"
 import { triggerHaptic } from "@/lib/haptics"
@@ -30,9 +31,14 @@ interface InvestmentHistoryProps {
         type: string
         quantity: number
         unitPrice: number
+        unitPriceBase?: number
+        unitPriceUSD?: number
         totalAmount: number
+        totalAmountBase?: number
+        totalAmountUSD?: number
         currency: string
         fees: number
+        rawDate?: string
         date: string
         notes: string | null
         linkedTransactionId: string | null
@@ -57,6 +63,7 @@ export function InvestmentHistory({
     workspaceId,
     baseCurrency,
 }: InvestmentHistoryProps) {
+    const { isUSD, activeCurrency } = useInvestmentCurrency()
     const [editingTx, setEditingTx] = React.useState<EditTransactionData | null>(null)
     const [selectedTx, setSelectedTx] = React.useState<any | null>(null)
     const [deleteLinkedExpense, setDeleteLinkedExpense] = React.useState(true)
@@ -189,6 +196,10 @@ export function InvestmentHistory({
                         <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
                             {visibleTxs.map((tx) => {
                                 const isBuy = tx.type === "BUY"
+                                const displayTotal = isUSD ? (tx.totalAmountUSD ?? tx.totalAmount) : (tx.totalAmountBase ?? tx.totalAmount)
+                                const displayUnitPrice = isUSD ? (tx.unitPriceUSD ?? tx.unitPrice) : (tx.unitPriceBase ?? tx.unitPrice)
+                                const isDifferentCurrency = tx.currency !== activeCurrency
+
                                 return (
                                     <div
                                         key={tx.id}
@@ -238,8 +249,13 @@ export function InvestmentHistory({
                                                     <span>•</span>
                                                     <span>
                                                         {formatQuantity(tx.quantity)} {tx.symbol} @{" "}
-                                                        <MaskedValue value={formatCurrency(tx.unitPrice, tx.currency)} />
+                                                        <MaskedValue value={formatCurrency(displayUnitPrice, activeCurrency)} />
                                                     </span>
+                                                    {isDifferentCurrency && (
+                                                        <span className="text-[10px] text-zinc-400 font-normal">
+                                                            (Orig: <MaskedValue value={formatCurrency(tx.unitPrice, tx.currency)} />)
+                                                        </span>
+                                                    )}
                                                     {tx.fees > 0 && (
                                                         <>
                                                             <span>•</span>
@@ -258,8 +274,13 @@ export function InvestmentHistory({
                                         <div className="flex items-center gap-2 shrink-0">
                                             <div className="text-right mr-1 font-mono tabular-nums">
                                                 <div className="font-bold text-xs sm:text-sm text-zinc-900 dark:text-zinc-50">
-                                                    <MaskedValue value={formatCurrency(tx.totalAmount, tx.currency)} />
+                                                    <MaskedValue value={formatCurrency(displayTotal, activeCurrency)} />
                                                 </div>
+                                                {isDifferentCurrency && (
+                                                    <div className="text-[10px] text-zinc-400 font-medium leading-tight">
+                                                        Orig: <MaskedValue value={formatCurrency(tx.totalAmount, tx.currency)} />
+                                                    </div>
+                                                )}
                                             </div>
 
                                             <Button

@@ -16,6 +16,7 @@ import { eq, and, desc, asc, inArray, sql, isNull, or, ilike } from "drizzle-orm
 import { revalidatePath } from "next/cache"
 import { encryptAmount, decryptAmount } from "@/lib/encryption"
 import { getOrUpdateAssetPrices, getAssetHistory, searchOnlineMarketAssets, MarketSearchResult } from "@/lib/investment-rates"
+import { checkAndUpdateRates } from "@/lib/exchange-rates"
 
 const convertAmount = (
     amount: number,
@@ -23,15 +24,34 @@ const convertAmount = (
     to: string,
     ratesMap: Record<string, Record<string, number>>
 ): number => {
-    if (from === to) return amount
-    const directRate = ratesMap[from]?.[to]
-    if (directRate !== undefined) return amount * directRate
+    if (from === to || !amount) return amount
+    const f = from.toUpperCase()
+    const t = to.toUpperCase()
+    if (f === t) return amount
 
-    const rateToUSD = ratesMap[from]?.["USD"]
-    const rateFromUSD = ratesMap["USD"]?.[to]
-    if (rateToUSD !== undefined && rateFromUSD !== undefined) {
+    // 1. Direct rate
+    const directRate = ratesMap[f]?.[t]
+    if (directRate !== undefined && directRate > 0) return amount * directRate
+
+    // 2. Inverse direct rate (e.g. if only USD -> ARS is in ratesMap at 1300, then ARS -> USD is 1/1300)
+    const inverseDirectRate = ratesMap[t]?.[f]
+    if (inverseDirectRate !== undefined && inverseDirectRate > 0) return amount / inverseDirectRate
+
+    // 3. Via USD intermediate bridge
+    const rateToUSD = ratesMap[f]?.["USD"] ?? (ratesMap["USD"]?.[f] ? 1 / ratesMap["USD"][f] : undefined)
+    const rateFromUSD = ratesMap["USD"]?.[t] ?? (ratesMap[t]?.["USD"] ? 1 / ratesMap[t]["USD"] : undefined)
+    if (rateToUSD !== undefined && rateFromUSD !== undefined && rateToUSD > 0 && rateFromUSD > 0) {
         return amount * rateToUSD * rateFromUSD
     }
+
+    // 4. Default realistic market fallbacks if ratesMap is empty / unseeded
+    if (f === "ARS" && t === "USD") return amount / 1300
+    if (f === "USD" && t === "ARS") return amount * 1300
+    if (f === "EUR" && t === "USD") return amount * 1.08
+    if (f === "USD" && t === "EUR") return amount / 1.08
+    if (f === "BRL" && t === "USD") return amount / 5.5
+    if (f === "USD" && t === "BRL") return amount * 5.5
+
     return amount
 }
 
@@ -615,8 +635,10 @@ export interface HoldingPosition {
     icon?: string | null
     quantity: number
     avgBuyPrice: number
+    avgBuyPriceUSD?: number
     currency: string
     currentPrice: number
+    currentPriceUSD?: number
     currentValueInAssetCurrency: number
     currentValueInBaseCurrency: number
     currentValueInUSD: number
@@ -625,6 +647,7 @@ export interface HoldingPosition {
     unrealizedPnLBaseCurrency: number
     unrealizedPnLUSD: number
     unrealizedPnLPct: number
+    unrealizedPnLPctUSD?: number
     change24hPct?: number
 }
 
@@ -676,9 +699,14 @@ export interface InvestmentDashboardData {
         type: string
         quantity: number
         unitPrice: number
+        unitPriceBase?: number
+        unitPriceUSD?: number
         totalAmount: number
+        totalAmountBase?: number
+        totalAmountUSD?: number
         currency: string
         fees: number
+        rawDate: string
         date: string
         notes: string | null
         linkedTransactionId: string | null
@@ -737,7 +765,8 @@ export async function getInvestmentsDashboardData(
 
         if (!workspace) return { success: false, error: "Workspace no encontrado o sin permisos" }
 
-        // 2. Fetch all currency rates for conversions
+        // 2. Fetch and ensure market rates exist
+        await checkAndUpdateRates().catch(() => {})
         const allRates = await db.select().from(marketRates)
         const ratesMap: Record<string, Record<string, number>> = {}
         for (const r of allRates) {
@@ -862,8 +891,10 @@ export async function getInvestmentsDashboardData(
 
         for (const a of activeHoldingAssets) {
             const livePriceData = livePrices[a.symbol.toUpperCase()]
-            const currentPrice = livePriceData?.price ?? (a.totalBuyQuantity > 0 ? a.totalBuyCostInUSD / a.totalBuyQuantity : 0)
-            const priceCurrency = livePriceData?.currency ?? a.defaultCurrency ?? "USD"
+            const isBA = a.symbol.toUpperCase().endsWith(".BA") || a.assetType === "CEDEAR"
+            const priceCurrency = isBA ? "ARS" : (livePriceData?.currency?.toUpperCase() || (a.defaultCurrency?.toUpperCase() || "USD"))
+            
+            const currentPrice = livePriceData?.price ?? (a.totalBuyQuantity > 0 ? (priceCurrency === "USD" ? a.totalBuyCostInUSD / a.totalBuyQuantity : a.totalBuyCostInBase / a.totalBuyQuantity) : 0)
 
             // Current valuation converted from live price currency to baseCurrency and USD
             const currentValueInBaseCurrency = convertAmount(
@@ -884,13 +915,20 @@ export async function getInvestmentsDashboardData(
             const costBasisInBaseCurrency = a.totalBuyCostInBase * remainingRatio
             const costBasisInUSD = a.totalBuyCostInUSD * remainingRatio
 
-            // Average buy price in base currency
+            // Average buy price in base currency and in USD
             const avgBuyPrice = a.netQuantity > 0 ? costBasisInBaseCurrency / a.netQuantity : 0
+            const avgBuyPriceUSD = a.netQuantity > 0 ? costBasisInUSD / a.netQuantity : 0
+
+            // Market price converted to base currency and USD
+            const currentPriceInBase = convertAmount(currentPrice, priceCurrency, workspace.baseCurrency, ratesMap)
+            const currentPriceInUSD = convertAmount(currentPrice, priceCurrency, "USD", ratesMap)
 
             const unrealizedPnLBaseCurrency = currentValueInBaseCurrency - costBasisInBaseCurrency
             const unrealizedPnLUSD = currentValueInUSD - costBasisInUSD
             const unrealizedPnLPct =
                 costBasisInBaseCurrency > 0 ? (unrealizedPnLBaseCurrency / costBasisInBaseCurrency) * 100 : 0
+            const unrealizedPnLPctUSD =
+                costBasisInUSD > 0 ? (unrealizedPnLUSD / costBasisInUSD) * 100 : 0
 
             totalPortfolioValue += currentValueInBaseCurrency
             totalInvestedCost += costBasisInBaseCurrency
@@ -906,8 +944,10 @@ export async function getInvestmentsDashboardData(
                 icon: a.icon,
                 quantity: a.netQuantity,
                 avgBuyPrice,
+                avgBuyPriceUSD,
                 currency: workspace.baseCurrency,
-                currentPrice: convertAmount(currentPrice, priceCurrency, workspace.baseCurrency, ratesMap),
+                currentPrice: currentPriceInBase,
+                currentPriceUSD: currentPriceInUSD,
                 currentValueInAssetCurrency: a.netQuantity * currentPrice,
                 currentValueInBaseCurrency,
                 currentValueInUSD,
@@ -916,6 +956,7 @@ export async function getInvestmentsDashboardData(
                 unrealizedPnLBaseCurrency,
                 unrealizedPnLUSD,
                 unrealizedPnLPct,
+                unrealizedPnLPctUSD,
                 change24hPct: livePriceData?.change24hPct,
             })
         }
@@ -1055,26 +1096,39 @@ export async function getInvestmentsDashboardData(
         // 11. Recent Transactions sorted descending
         const recentTransactions = [...decryptedTxs]
             .reverse()
-            .map((tx) => ({
-                id: tx.id,
-                assetId: tx.assetId,
-                symbol: tx.symbol,
-                name: tx.name,
-                assetType: tx.assetType,
-                type: tx.type,
-                quantity: tx.quantity,
-                unitPrice: tx.unitPrice,
-                totalAmount: tx.totalAmount,
-                currency: tx.currency,
-                fees: tx.fees,
-                date: new Date(tx.date).toLocaleDateString("es-ES", {
-                    day: "2-digit",
-                    month: "short",
-                    year: "numeric",
-                }),
-                notes: tx.notes,
-                linkedTransactionId: tx.linkedTransactionId,
-            }))
+            .map((tx) => {
+                const rawDate = new Date(tx.date).toISOString().split("T")[0]
+                const totalAmountBase = convertAmount(tx.totalAmount, tx.currency, workspace.baseCurrency, ratesMap)
+                const totalAmountUSD = convertAmount(tx.totalAmount, tx.currency, "USD", ratesMap)
+                const unitPriceBase = convertAmount(tx.unitPrice, tx.currency, workspace.baseCurrency, ratesMap)
+                const unitPriceUSD = convertAmount(tx.unitPrice, tx.currency, "USD", ratesMap)
+
+                return {
+                    id: tx.id,
+                    assetId: tx.assetId,
+                    symbol: tx.symbol,
+                    name: tx.name,
+                    assetType: tx.assetType,
+                    type: tx.type,
+                    quantity: tx.quantity,
+                    unitPrice: tx.unitPrice,
+                    unitPriceBase,
+                    unitPriceUSD,
+                    totalAmount: tx.totalAmount,
+                    totalAmountBase,
+                    totalAmountUSD,
+                    currency: tx.currency,
+                    fees: tx.fees,
+                    rawDate,
+                    date: new Date(tx.date).toLocaleDateString("es-ES", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                    }),
+                    notes: tx.notes,
+                    linkedTransactionId: tx.linkedTransactionId,
+                }
+            })
 
         return {
             success: true,
