@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { usePrivacy } from "./privacy-provider"
 
 interface AnimatedNumberProps {
   value: number
@@ -11,6 +12,7 @@ interface AnimatedNumberProps {
 
 export function AnimatedNumber({ value, prefix = "", duration = 1000, className = "" }: AnimatedNumberProps) {
   const [displayValue, setDisplayValue] = useState(0)
+  const { isPrivate } = usePrivacy()
 
   useEffect(() => {
     let startTime: number | null = null
@@ -33,6 +35,14 @@ export function AnimatedNumber({ value, prefix = "", duration = 1000, className 
 
     requestAnimationFrame(animate)
   }, [value, duration])
+
+  if (isPrivate) {
+    return (
+      <span className={`tracking-wider font-bold select-none text-zinc-400 dark:text-zinc-500 ${className}`}>
+        {prefix} ••••••
+      </span>
+    )
+  }
 
   return (
     <span className={className} suppressHydrationWarning>

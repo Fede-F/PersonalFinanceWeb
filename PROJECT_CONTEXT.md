@@ -1,87 +1,88 @@
 # Project Context: Finance Web App (SaaS Ready)
 
-## 1. Project Vision
-Una aplicación web de finanzas personales escalable y colaborativa.
-- **Core Value:** Gestión financiera multi-tenant basada en "Workspaces" (Hogares/Grupos).
-- **Enfoque:** API-first, Mobile-first (PWA), diseñada para automatización (n8n ready).
-- **Roadmap & Estado Actual:**
-    - [x] **Fase 1: Core de Gastos y Multimoneda** (Completado: registros fijos/en cuotas, estadísticas SVG, API de cotizaciones en background, Modo Oscuro persistente, edición/eliminación de workspaces y configuración base PWA instalable en Android/iOS/Escritorio con Service Worker).
-    - [ ] **Gestión de Miembros en el Workspace** (FOCUS ACTUAL: Interfaz visual para invitar, ver y remover miembros colaboradores).
-    - [ ] **Fase 2: Gestión Activa de Cuentas e Inversiones** (Seguimiento de portafolios, cuentas de bancos y activos).
-    - [ ] **Fase 3: Inteligencia Financiera y Metas** (Comparativas de rendimiento vs. mes pasado, Cash Flow y presupuestos).
+## 1. Project Vision & Roadmap
+Una aplicación web de finanzas personales escalable, segura y colaborativa con enfoque **Mobile-first (PWA)** y **Multi-tenant**.
 
-## 2. Tech Stack (Strict)
-- **Framework:** Next.js 14+ (App Router).
-- **Language:** TypeScript (Strict Mode).
-- **Styling:** Tailwind CSS + Shadcn/UI.
-- **Database:** PostgreSQL.
-- **ORM:** Drizzle ORM (con Migrations).
-- **Auth:** NextAuth.js v5 (Auth.js).
-- **State Management:** React Server Components (Server State) + Zustand (Client State si es necesario).
-- **PWA Support:** Service Worker nativo personalizado (`public/sw.js`), Manifiesto dinámico de Next.js (`src/app/manifest.ts`) e iconos optimizados.
+### 📌 Roadmap & Estado de Implementación:
+- [x] **Fase 1: Core de Gastos y Flujo de Fondos (COMPLETADA)**
+  - Gestión de Workspaces compartidos e individuales.
+  - Registro de gastos/ingresos comunes, fijos y en cuotas (tarjetas de crédito).
+  - Normalización multimoneda con tasas de cambio en tiempo real (`market_rates`).
+  - Gráficos interactivos en Recharts (Distribución de Gastos y Capacidad de Ahorro).
+  - PWA instalable con Service Worker nativo (`/manifest.webmanifest`, `/sw.js`).
+  - Navegación responsive: Header sin sidebar en PC + Barra inferior con botón central `+` en Mobile.
+- [x] **Fase 2: Gestión Activa de Inversiones y Portafolios (COMPLETADA)**
+  - Seguimiento en vivo de **Criptomonedas**, **Acciones de USA** y **CEDEARs**.
+  - **Buscador en Vivo Inteligente (`AssetSearchCombobox`)**: Búsqueda simultánea en Yahoo Finance y CoinGecko con autocompletado y catálogo de recientes.
+  - **Cálculo Bidireccional:** Conexión en tiempo real entre Cantidad, Precio Unitario y Total Invertido.
+  - **Sincronización con Gastos:** Opción de descontar del balance del workspace (`linkedTransactionId`).
+  - **Edición y Eliminación en Historial (`EditInvestmentModal`):** Actualización en cascada del gasto vinculado.
+  - **Gráficos Recharts:** Evolución temporal de cartera (`PortfolioChart`) y Donut de Distribución (`AssetAllocationDonut`).
+  - **Switch Multimoneda (`[ Moneda Base | USD ]`):** Adaptación en vivo de KPIs, gráficos, tablas y precarga de formularios.
+  - **Modo Privacidad Global (👁️):** Enmascaramiento de saldos (`••••••`) con persistencia en `localStorage`.
+  - **Micro-interacciones y Haptic Feedback:** Vibraciones suaves (6-8ms), compresión física (`active:scale-95`) y selector de período optimista en 0ms.
+  - **Paginación Progresiva:** Carga por scroll infinito (`IntersectionObserver`) y filtros rápidos táctiles (Pills).
+  - **Seguridad:** Cifrado AES-256-CBC de valores numéricos en Postgres.
+- [ ] **Fase 3: Gestión de Miembros y Permisos** (Invitaciones a workspaces, roles OWNER/EDITOR/VIEWER).
+- [ ] **Fase 4: Inteligencia Financiera y Metas** (Cash Flow proyectado, presupuestos automáticos y compactación de históricos).
 
+---
 
-## 4. Documentación Secundaria
-- [🛠️ Estándares de Desarrollo](CODING_STANDARDS.md): Reglas de arquitectura, naming y lógica.
-- [🚀 Plan de Evolución Dashboard](documentation/dashboard_evolution_plan.md): Próximos pasos (Contexto mensual, Flujo de caja, Inversiones).
-- [📱 Configuración PWA](documentation/pwa_setup.md): Detalles sobre la instalación móvil, manifiesto, Service Worker y comportamiento offline.
+## 2. Tech Stack
+- **Framework:** Next.js 16 (App Router + Turbopack).
+- **Lenguaje:** TypeScript (Strict Mode).
+- **Estilos & UI:** Tailwind CSS v4 + Shadcn/UI + Lucide Icons.
+- **Gráficos:** Recharts.
+- **Base de Datos:** PostgreSQL + Drizzle ORM (con migraciones).
+- **Autenticación:** NextAuth.js v5 (Auth.js) con sesiones JWT y credenciales/OAuth.
+- **PWA:** Service Worker (`public/sw.js`), Manifiesto (`src/app/manifest.ts`), Cache de assets estáticos y soporte offline.
+- **Criptografía:** Node.js `crypto` con AES-256-CBC para cifras monetarias sensibles.
 
+---
 
-## 5. Architecture & Patterns
-- **Database-per-Schema:** NO. Usamos base de datos compartida.
-- **Tenancy Model:** "Workspace-based Tenancy".
-    - El `Workspace` es la unidad de aislamiento de datos y facturación.
-    - No existe una entidad "Organization" o "Tenant" superior.
-    - Un usuario (Global Identity) puede pertenecer a N Workspaces mediante `workspace_members`.
-- **Data Isolation:**
-    - Todas las tablas de negocio (`transactions`, `accounts`, `investments`) DEBEN tener `workspace_id`.
-    - **RLS Rule:** `auth.uid()` debe existir en `workspace_members` para el `workspace_id` de la fila que se intenta leer/escribir.
-- **User Identity:**
-    - Los usuarios son globales (`public.users`). No se duplican por workspace.
-    - Soporte híbrido: OAuth (Google/GitHub) y Credenciales (Email/Password).
-    - Unificación automática: Cuentas sociales y de credenciales se vinculan mediante el email.
-    - El perfil del usuario (nombre, avatar) es único y compartido entre sus workspaces.
-- **Security:** Row Level Security (RLS) en Postgres es la defensa final.
-- **Money Handling:**
-    - Nunca usar `float` para dinero. Usar `decimal`/`numeric` en DB.
-    - **UX:** Uso de `MoneyInput` con separadores de miles y coma decimal en tiempo real.
-    - Multimoneda: Guardar monto original + moneda original + tasa de cambio inmutable en la transacción (`transactions.exchangeRate`). La tabla global `market_rates` solo almacena el último valor vigente.
-    - Sincronización: La moneda por defecto del usuario se sincroniza con la `base_currency` de su workspace activo.
-    - Cotizaciones de Mercado: Tabla global `market_rates` (sin `workspace_id`, opera como upsert).
-- **Validation Standard:**
-    - Uso de `React Hook Form` + `Zod` para validación en cliente con marcado visual de campos inválidos (bordes rojos y mensajes localizados).
-    - Server Actions deben usar `safeParse` de Zod para evitar excepciones fatales.
+## 3. Arquitectura y Reglas del Negocio
 
-## 4. Database Schema (Drizzle/SQL Definition Reference)
+### 🏢 Multi-tenancy basado en Workspaces
+* La unidad de aislamiento de datos es el `workspace_id`.
+* Todo registro de transacciones, posiciones y categorías pertenece a un workspace.
+* Un usuario global (`users`) puede acceder a N workspaces según `workspace_members`.
 
-### Global / System Tables
-- `users`: id (UUID), email, full_name, password (hashed, optional for OAuth users).
-- `accounts`: id (provider + id), user_id, type, provider, access_token, etc. (NextAuth tables).
-- `market_rates`: id, base_currency, target_currency, rate, date (Unique constraint on base_currency + target_currency; almacena solo el último valor/upsert).
-- `supported_currencies`: code (ISO), name, type.
+### 💱 Manejo Multimoneda & Cotizaciones
+* **Tasas Fiat y Cripto:** Tabla `market_rates` almacena las cotizaciones globales más recientes (ej: `USD/ARS`, `EUR/USD`).
+* **Cache de Activos de Mercado (`asset_market_prices`):** Caching global en Postgres con TTL de 15 minutos para minimizar peticiones a Yahoo Finance / CoinGecko.
+* **Histórico Inmutable (`asset_price_history`):** Snapshots diarios fijos por activo para graficar evolución histórica sin reconsultar APIs externas.
 
-### Tenant Tables (Must have `workspace_id`)
-- `workspaces`: id, name, owner_id, base_currency.
-- `workspace_members`: workspace_id, user_id, role (OWNER, EDITOR, VIEWER), permissions (JSONB).
-- `accounts`: id, workspace_id, name, type (CASH, BANK), currency, balance.
-- `categories`: id, workspace_id, name, icon, color.
-- `concept_blacklist`: id, workspace_id, concept, created_at (Unique constraint on workspace_id + concept).
-- `transactions`:
-    - id, workspace_id, account_id (OPTIONAL - Phase 1), category_id (OPTIONAL).
-    - type (INCOME, EXPENSE, TRANSFER).
-    - amount (original currency), currency.
-    - exchange_rate (snapshot at transaction time).
-    - date, description (UI: "Detalle / Notas").
+### 🔒 Seguridad y Cifrado
+* Los campos `amount`, `quantity`, `unitPrice`, `totalAmount`, `fees` se cifran en el backend mediante AES-256-CBC antes de guardarse en la base de datos.
+* El frontend nunca maneja claves de cifrado; recibe los valores descifrados desde Server Components o Server Actions autorizadas.
 
-## 5. Coding Guidelines for AI
-1. **Critical Thinking:** No asumas. Si un requerimiento es ambiguo, pregunta o implementa la solución más robusta/escalable.
-2. **Type Safety:** No uses `any`. Define interfaces para todo.
-3. **Component Modularity:** Componentes pequeños y reutilizables. Usa la estructura de carpetas de Next.js App Router correctamente.
-4. **Migrations:** Todo cambio en la BD debe hacerse vía migración de Drizzle (`drizzle-kit generate` + `migrate`).
+---
 
-## 6. UX Patterns (Loading & Sorting)
-- **Rastreo de Carga en Cambios de Período**: Las transiciones del selector de fecha o workspace activan un indicador de carga (`LoadingProvider`) y se apagan en el cliente únicamente tras recibir y montar el RSC payload del servidor mediante el componente cliente `<PeriodChangeTracker>`.
-- **Orden de Actividad / Transacciones**:
-  1. Se agrupan por prioridad: Gastos comunes (Grupo 1) -> Tarjeta de crédito o en cuotas (Grupo 2) -> Gastos fijos (Grupo 3) -> Ingresos fijos (Grupo 4).
-  2. Dentro del mismo grupo, se ordenan por fecha comercial descendente (`date`).
-  3. Si la fecha coincide, se ordenan cronológicamente según la hora de inserción descendente (`createdAt`).
+## 4. Estructura de Rutas y Componentes Clave
+
+```
+src/
+├── app/
+│   ├── (auth)/              # Login y Registro
+│   ├── dashboard/           # Módulo de Gastos y Flujo de Fondos (Fase 1)
+│   ├── investments/         # Módulo de Portafolio de Inversiones (Fase 2)
+│   └── actions/             # Server Actions (dashboard, investments, transactions)
+├── components/
+│   ├── investments/         # Buscador en vivo, KPIs, Gráficos, Holdings, Historial y Modales
+│   ├── ui/                  # Componentes base Shadcn (Button, Dialog, Dropdown, etc.)
+│   ├── privacy-provider.tsx # Contexto y Toggle de Modo Privacidad
+│   ├── period-selector.tsx  # Selector de período mensual con carga optimista
+│   └── mobile-bottom-nav.tsx# Barra de navegación inferior fija para PWA/Mobile
+└── lib/
+    ├── crypto.ts            # Cifrado AES-256-CBC
+    ├── haptics.ts           # Micro-vibraciones hápticas táctiles
+    └── investment-rates.ts  # Clientes de APIs de mercado (Yahoo Finance & CoinGecko)
+```
+
+---
+
+## 5. Guía Rápida para Desarrolladores e IA
+1. **Mobile-First:** Toda pantalla o componente debe diseñarse y probarse primero en dimensiones de celular ($360\text{px} - 430\text{px}$) y luego adaptarse a Desktop.
+2. **Type Safety:** No utilizar `any` salvo excepciones explícitamente documentadas.
+3. **Cálculos Financieros:** Conservar la consistencia bidireccional entre la moneda base del workspace y USD.
+4. **Build & Test:** Verificar siempre con `npx tsc --noEmit` y `npm run build` antes de finalizar tareas.

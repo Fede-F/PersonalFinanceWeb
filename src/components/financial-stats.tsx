@@ -5,6 +5,8 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { cn } from "@/lib/utils"
 import { TrendingUp, TrendingDown, ShieldAlert, PiggyBank } from "lucide-react"
 
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts"
+
 interface StatsProps {
     transactions: any[]
     preferredCurrency: string
@@ -54,23 +56,36 @@ export function ExpensesDistribution({ transactions, preferredCurrency }: StatsP
     // Compute percentages
     const categoriesWithPct = mainCategories.map(cat => ({
         ...cat,
+        value: cat.amount,
         pct: totalExpenses > 0 ? (cat.amount / totalExpenses) * 100 : 0
     }))
 
-    // SVG Donut Calculations
-    const radius = 15.91549430918954
-    const circumference = 2 * Math.PI * radius // 100
+    const formatCurrency = (val: number) => {
+        return `${preferredCurrency} ${val.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+    }
 
-    let accumulatedPct = 0
-    const segments = categoriesWithPct.map(cat => {
-        const offset = circumference - accumulatedPct
-        accumulatedPct += cat.pct
-        return {
-            ...cat,
-            offset,
-            strokeDasharray: `${cat.pct} ${100 - cat.pct}`
+    const CustomTooltip = ({ active, payload }: any) => {
+        if (active && payload && payload.length) {
+            const data = payload[0].payload
+            return (
+                <div className="bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm border border-zinc-200 dark:border-zinc-800 p-2.5 rounded-lg shadow-lg text-xs space-y-1">
+                    <div className="flex items-center gap-2 font-semibold text-zinc-900 dark:text-zinc-50">
+                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: data.color }} />
+                        {data.name}
+                    </div>
+                    <div className="flex justify-between gap-4 text-zinc-500 dark:text-zinc-400">
+                        <span>Monto:</span>
+                        <span className="font-bold text-zinc-800 dark:text-zinc-200">{formatCurrency(data.value)}</span>
+                    </div>
+                    <div className="flex justify-between gap-4 text-zinc-500 dark:text-zinc-400">
+                        <span>Porcentaje:</span>
+                        <span className="font-bold text-zinc-800 dark:text-zinc-200">{data.pct.toFixed(1)}%</span>
+                    </div>
+                </div>
+            )
         }
-    })
+        return null
+    }
 
     return (
         <Card className="w-full border-none shadow-sm overflow-hidden bg-white dark:bg-zinc-900/50 backdrop-blur-sm p-0">
@@ -80,62 +95,45 @@ export function ExpensesDistribution({ transactions, preferredCurrency }: StatsP
             </CardHeader>
             <CardContent className="p-4 sm:p-6 pt-0 sm:pt-2">
                 <div className="flex flex-col items-center justify-center gap-6">
-                    {/* SVG Donut */}
-                    <div className="relative w-32 h-32 sm:w-40 sm:h-40 xl:w-44 xl:h-44 shrink-0 flex items-center justify-center">
+                    {/* Recharts Donut */}
+                    <div className="relative w-40 h-40 sm:w-48 sm:h-48 xl:w-52 xl:h-52 shrink-0 flex items-center justify-center">
                         {totalExpenses === 0 ? (
-                            <svg viewBox="0 0 42 42" className="w-full h-full transform -rotate-90">
-                                <circle
-                                    cx="21"
-                                    cy="21"
-                                    r={radius}
-                                    fill="transparent"
-                                    stroke="#e4e4e7"
-                                    strokeWidth="4.5"
-                                    className="dark:stroke-zinc-800"
-                                />
-                            </svg>
+                            <div className="w-full h-full flex items-center justify-center rounded-full border-4 border-dashed border-zinc-200 dark:border-zinc-800 text-zinc-400 text-xs text-center p-4">
+                                Sin gastos registrados
+                            </div>
                         ) : (
-                            <svg viewBox="0 0 42 42" className="w-full h-full transform -rotate-90">
-                                <circle
-                                    cx="21"
-                                    cy="21"
-                                    r={radius}
-                                    fill="transparent"
-                                    stroke="#f4f4f5"
-                                    strokeWidth="4"
-                                    className="dark:stroke-zinc-800/30"
-                                />
-                                {segments.map((seg, idx) => (
-                                    seg.pct > 0 && (
-                                        <circle
-                                            key={idx}
-                                            cx="21"
-                                            cy="21"
-                                            r={radius}
-                                            fill="transparent"
-                                            stroke={seg.color}
-                                            strokeWidth="4.5"
-                                            strokeDasharray={seg.strokeDasharray}
-                                            strokeDashoffset={seg.offset}
-                                            strokeLinecap="round"
-                                            className="transition-all duration-500 ease-out"
-                                        />
-                                    )
-                                ))}
-                            </svg>
+                            <>
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Tooltip content={<CustomTooltip />} />
+                                        <Pie
+                                            data={categoriesWithPct}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={48}
+                                            outerRadius={70}
+                                            paddingAngle={3}
+                                            dataKey="value"
+                                        >
+                                            {categoriesWithPct.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={entry.color} stroke="transparent" />
+                                            ))}
+                                        </Pie>
+                                    </PieChart>
+                                </ResponsiveContainer>
+                                <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-2 pointer-events-none">
+                                    <span className="text-[9px] uppercase font-bold text-zinc-400 tracking-wider">Total</span>
+                                    <span className="text-xs sm:text-sm font-black text-zinc-800 dark:text-zinc-100 tabular-nums truncate max-w-[100px]">
+                                        {formatCurrency(totalExpenses)}
+                                    </span>
+                                </div>
+                            </>
                         )}
-
-                        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-2">
-                            <span className="text-[8px] sm:text-[9px] xl:text-[10px] uppercase font-bold text-zinc-400 tracking-wider">Total Gastos</span>
-                            <span className="text-xs sm:text-sm xl:text-lg font-black text-zinc-800 dark:text-zinc-100 tabular-nums truncate max-w-full">
-                                {preferredCurrency} {totalExpenses.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                            </span>
-                        </div>
                     </div>
 
-                    {/* Interactive Legend list */}
+                    {/* Category List */}
                     <div className="flex-1 w-full space-y-2 sm:space-y-3 lg:space-y-2 xl:space-y-3 max-w-sm">
-                        {segments.map((seg, idx) => (
+                        {categoriesWithPct.map((seg, idx) => (
                             <div key={idx} className="flex items-center justify-between p-2 sm:p-3 rounded-lg sm:rounded-xl border border-zinc-100 dark:border-zinc-800/40 hover:bg-zinc-50 dark:hover:bg-zinc-800/20 transition-colors">
                                 <div className="flex items-center gap-2 sm:gap-3">
                                     <div className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded shadow-sm" style={{ backgroundColor: seg.color }} />

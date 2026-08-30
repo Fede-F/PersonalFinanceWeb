@@ -1,103 +1,114 @@
-import React from 'react';
+"use client"
+
+import React from "react"
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts"
 
 export interface CategorySegment {
-  name: string;
-  pct: number;
-  amount: number;
-  color: string;
+    name: string
+    pct: number
+    amount: number
+    color: string
 }
 
 interface ExpenseDonutProps {
-  totalExpenses: number;
-  segments: CategorySegment[];
+    totalExpenses: number
+    segments: CategorySegment[]
 }
 
-/**
- * Desktop version of the expense donut chart.
- * Uses a larger viewBox (50×50) and radius 18 + strokeWidth 5
- * so the ring is visually bigger while leaving a spacious centre for text.
- */
 export const DesktopExpenseDonut: React.FC<ExpenseDonutProps> = ({
-  totalExpenses,
-  segments,
+    totalExpenses,
+    segments,
 }) => {
-  // Using a 50×50 viewBox centred at 25,25 with radius 18
-  // outer edge 25+18=43, inner edge 43-5=38 — well within the viewBox
-  const cx = 25;
-  const cy = 25;
-  const radius = 18;
-  const sw = 5;
+    const data = segments.map((s) => ({
+        name: s.name,
+        value: s.amount,
+        pct: s.pct,
+        color: s.color,
+    }))
 
-  const circumference = 2 * Math.PI * radius;
+    const CustomTooltip = ({ active, payload }: any) => {
+        if (active && payload && payload.length) {
+            const item = payload[0].payload
+            return (
+                <div className="bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm border border-zinc-200 dark:border-zinc-800 p-2.5 rounded-lg shadow-lg text-xs space-y-1">
+                    <div className="flex items-center gap-2 font-semibold text-zinc-900 dark:text-zinc-50">
+                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                        {item.name}
+                    </div>
+                    <div className="flex justify-between gap-4 text-zinc-500">
+                        <span>Monto:</span>
+                        <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                            {item.value.toLocaleString("es-AR", { maximumFractionDigits: 0 })}
+                        </span>
+                    </div>
+                    <div className="flex justify-between gap-4 text-zinc-500">
+                        <span>Porcentaje:</span>
+                        <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                            {item.pct.toFixed(1)}%
+                        </span>
+                    </div>
+                </div>
+            )
+        }
+        return null
+    }
 
-  let accumulatedPct = 0;
-  const segmentsWithOffsets = segments.map(seg => {
-    const offset = circumference - (accumulatedPct * circumference) / 100;
-    accumulatedPct += seg.pct;
-    return {
-      ...seg,
-      offset,
-      strokeDasharray: `${(seg.pct * circumference) / 100} ${circumference - (seg.pct * circumference) / 100}`
-    };
-  });
-
-  return (
-    <div className="flex items-center gap-6 mt-2">
-      {/* Donut chart — w-[140px] for a generous desktop size */}
-      <div className="relative w-[140px] h-[140px] shrink-0 flex items-center justify-center">
-        {totalExpenses === 0 ? (
-          <svg viewBox="0 0 50 50" className="w-full h-full transform -rotate-90">
-            <circle
-              cx={cx} cy={cy} r={radius}
-              fill="transparent" stroke="#e4e4e7" strokeWidth={sw}
-              className="dark:stroke-zinc-800"
-            />
-          </svg>
-        ) : (
-          <svg viewBox="0 0 50 50" className="w-full h-full transform -rotate-90">
-            <circle
-              cx={cx} cy={cy} r={radius}
-              fill="transparent" stroke="#f4f4f5" strokeWidth={sw}
-              className="dark:stroke-zinc-800/30"
-            />
-            {segmentsWithOffsets.map((seg, idx) => (
-              seg.pct > 0 && (
-                <circle
-                  key={idx}
-                  cx={cx} cy={cy} r={radius}
-                  fill="transparent"
-                  stroke={seg.color}
-                  strokeWidth={sw}
-                  strokeDasharray={seg.strokeDasharray}
-                  strokeDashoffset={seg.offset}
-                  className="transition-all duration-500 ease-out"
-                />
-              )
-            ))}
-          </svg>
-        )}
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-2">
-          <span className="text-[9px] uppercase font-bold text-zinc-400 tracking-wider">Gastos</span>
-          <span className="text-sm font-black text-zinc-800 dark:text-zinc-100 tabular-nums truncate max-w-full">
-            {totalExpenses.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-          </span>
-        </div>
-      </div>
-
-      {/* Legend */}
-      <div className="flex-1 space-y-2 max-h-[140px] overflow-y-auto pr-1">
-        {segments.map((seg, idx) => (
-          <div key={idx} className="flex items-center justify-between gap-2" suppressHydrationWarning>
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: seg.color }} />
-              <div className="flex flex-col min-w-0">
-                <span className="font-bold text-zinc-600 dark:text-zinc-400 text-xs leading-tight truncate">{seg.name}</span>
-              </div>
+    return (
+        <div className="flex items-center gap-6 mt-2">
+            {/* Donut chart */}
+            <div className="relative w-[140px] h-[140px] shrink-0 flex items-center justify-center">
+                {totalExpenses === 0 ? (
+                    <div className="w-full h-full rounded-full border-2 border-dashed border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-xs text-zinc-400">
+                        Sin datos
+                    </div>
+                ) : (
+                    <>
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Tooltip content={<CustomTooltip />} />
+                                <Pie
+                                    data={data}
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={42}
+                                    outerRadius={62}
+                                    paddingAngle={3}
+                                    dataKey="value"
+                                >
+                                    {data.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.color} stroke="transparent" />
+                                    ))}
+                                </Pie>
+                            </PieChart>
+                        </ResponsiveContainer>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-2 pointer-events-none">
+                            <span className="text-[9px] uppercase font-bold text-zinc-400 tracking-wider">Gastos</span>
+                            <span className="text-sm font-black text-zinc-800 dark:text-zinc-100 tabular-nums truncate max-w-[90px]">
+                                {totalExpenses.toLocaleString("es-AR", { maximumFractionDigits: 0 })}
+                            </span>
+                        </div>
+                    </>
+                )}
             </div>
-            <span className="font-extrabold text-zinc-900 dark:text-zinc-100 text-sm tabular-nums shrink-0">{seg.pct.toFixed(0)}%</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
+
+            {/* Legend */}
+            <div className="flex-1 space-y-2 max-h-[140px] overflow-y-auto pr-1">
+                {segments.map((seg, idx) => (
+                    <div key={idx} className="flex items-center justify-between gap-2" suppressHydrationWarning>
+                        <div className="flex items-center gap-2 min-w-0">
+                            <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: seg.color }} />
+                            <div className="flex flex-col min-w-0">
+                                <span className="font-bold text-zinc-600 dark:text-zinc-400 text-xs leading-tight truncate">
+                                    {seg.name}
+                                </span>
+                            </div>
+                        </div>
+                        <span className="font-extrabold text-zinc-900 dark:text-zinc-100 text-sm tabular-nums shrink-0">
+                            {seg.pct.toFixed(0)}%
+                        </span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    )
+}

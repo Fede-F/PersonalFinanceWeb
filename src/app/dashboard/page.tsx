@@ -23,8 +23,12 @@ import { AnimatedNumber } from "@/components/animated-number"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { ThemeSync } from "@/components/theme-sync"
 import { NotificationBell } from "@/components/notification-bell"
+import { PrivacyToggle } from "@/components/privacy-provider"
 import { ActiveWorkspaceTracker } from "@/components/active-workspace-tracker"
 import { PeriodChangeTracker } from "@/components/loading-provider"
+
+import { DashboardMobileQuickAction } from "@/components/dashboard-mobile-quick-action"
+import Link from "next/link"
 
 const convertAmount = (amount: number, from: string, to: string, latestRatesMap: Record<string, Record<string, number>>): number => {
     if (from === to) return amount
@@ -190,7 +194,7 @@ export default async function DashboardPage(props: {
     const activePeriod = `${currentWorkspace.id}-${month !== undefined ? month : 'current'}-${year !== undefined ? year : 'current'}`
 
     return (
-        <div className="flex flex-col min-h-screen bg-zinc-50/50 dark:bg-zinc-950">
+        <div className="flex flex-col min-h-screen bg-zinc-50/50 dark:bg-zinc-950 pb-16 md:pb-0">
             {/* Theme synchronizer */}
             <ThemeSync savedTheme={userData.theme} />
             <ActiveWorkspaceTracker workspaceId={currentWorkspace.id} />
@@ -199,7 +203,6 @@ export default async function DashboardPage(props: {
             {/* Header */}
             <header className="sticky top-0 z-30 flex h-16 items-center gap-2 px-3 sm:gap-4 sm:px-6 border-b bg-white/80 backdrop-blur-md dark:bg-zinc-900/80">
                 <div className="flex items-center gap-1.5 sm:gap-3">
-                    <h2 className="hidden min-[380px]:block text-base sm:text-lg font-bold tracking-tight bg-emerald-500 text-white px-1.5 py-0.5 sm:px-2 sm:py-1 rounded shadow-sm">FA</h2>
                     <WorkspaceSwitcher
                         workspaces={userMemberships}
                         currentWorkspaceId={currentWorkspace.id}
@@ -208,11 +211,30 @@ export default async function DashboardPage(props: {
                     />
                 </div>
 
+                {/* Desktop Navigation Tabs */}
+                <div className="hidden md:flex items-center gap-1 ml-4 bg-zinc-100 dark:bg-zinc-800/80 p-1 rounded-lg">
+                    <Link
+                        href={`/dashboard?workspaceId=${currentWorkspace.id}`}
+                        className="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 shadow-xs active:scale-95 transition-all duration-100 touch-manipulation"
+                    >
+                        <LayoutDashboard className="w-3.5 h-3.5 text-emerald-500" />
+                        Gastos & Flujo
+                    </Link>
+                    <Link
+                        href={`/investments?workspaceId=${currentWorkspace.id}`}
+                        className="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 active:scale-95 transition-all duration-100 touch-manipulation"
+                    >
+                        <TrendingUp className="w-3.5 h-3.5" />
+                        Inversiones
+                    </Link>
+                </div>
+
                 <div className="hidden md:flex ml-4">
                     <PeriodSelector initialMonth={month} initialYear={year} />
                 </div>
 
                 <div className="ml-auto flex items-center gap-1.5 sm:gap-3">
+                    <PrivacyToggle />
                     <ThemeToggle />
                     <NotificationBell />
                     <UserNav
@@ -389,7 +411,7 @@ export default async function DashboardPage(props: {
                                 <h3 className="text-xl font-bold tracking-tight">Actividad</h3>
                                 <p className="text-zinc-500 text-xs">Transacciones registradas en este período</p>
                             </div>
-                            <div className="flex justify-center w-full">
+                            <div className="hidden md:flex justify-center w-full">
                                 <TransactionModal
                                     key={currentWorkspace.id}
                                     workspaceId={currentWorkspace.id}
@@ -417,6 +439,17 @@ export default async function DashboardPage(props: {
                 </div>
 
             </main>
+
+            {/* Mobile Bottom Navigation Bar with Quick Transaction Modal */}
+            <DashboardMobileQuickAction
+                workspaceId={currentWorkspace.id}
+                accounts={accounts}
+                categories={categories}
+                currencies={currencies}
+                quickConcepts={quickConcepts}
+                defaultCurrency={currentWorkspace.baseCurrency}
+                userDefaultCurrency={userData.defaultCurrency}
+            />
         </div>
     )
 }

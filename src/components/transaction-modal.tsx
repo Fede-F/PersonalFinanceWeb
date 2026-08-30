@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { transactionSchema } from "@/lib/validations"
 import * as z from "zod"
+import { triggerHaptic } from "@/lib/haptics"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -50,9 +51,14 @@ interface TransactionModalProps {
     accounts: any[]
     categories: any[]
     currencies: any[]
-    quickConcepts: string[]
+    quickConcepts?: any[]
     defaultCurrency?: string
     userDefaultCurrency?: string
+    // Controlled modal props for external triggers (like MobileBottomNav)
+    isOpen?: boolean
+    onOpenChange?: (open: boolean) => void
+    hideTrigger?: boolean
+    triggerClassName?: string
 }
 
 export function TransactionModal({
@@ -60,12 +66,29 @@ export function TransactionModal({
     accounts,
     categories,
     currencies,
-    quickConcepts,
-    defaultCurrency,
-    userDefaultCurrency
+    quickConcepts = [],
+    defaultCurrency = "USD",
+    userDefaultCurrency,
+    isOpen: controlledOpen,
+    onOpenChange: setControlledOpen,
+    hideTrigger = false,
+    triggerClassName,
 }: TransactionModalProps) {
-    const [open, setOpen] = useState(false)
+    const isControlled = controlledOpen !== undefined
+    const [internalOpen, setInternalOpen] = useState(false)
+    const open = isControlled ? controlledOpen : internalOpen
+
+    const handleOpenChange = (newOpen: boolean) => {
+        if (isControlled) {
+            setControlledOpen?.(newOpen)
+        } else {
+            setInternalOpen(newOpen)
+        }
+    }
+
     const [loading, setLoading] = useState(false)
+    const [isInstallments, setIsInstallments] = useState(false)
+    const [isFixed, setIsFixed] = useState(false)
     const [showTooltip, setShowTooltip] = useState(false)
 
     // Configuración de React Hook Form
@@ -114,28 +137,33 @@ export function TransactionModal({
             if (result.success) {
                 toast.success("Transacción registrada correctamente")
                 reset()
-                setOpen(false)
+                handleOpenChange(false)
             } else {
                 toast.error(result.error || "Ocurrió un error inesperado")
             }
         } catch (error) {
-            console.error(error)
-            toast.error("Error al procesar la transacción")
+            toast.error("Error al procesar la solicitud")
         } finally {
             setLoading(false)
         }
     }
 
     return (
-        <Dialog open={open} onOpenChange={(v) => {
-            setOpen(v)
-            if (!v) reset()
-        }}>
-            <DialogTrigger asChild>
-                <Button size="sm" className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white w-full max-w-[280px] sm:w-auto justify-center">
-                    <Plus size={16} /> Nueva Transacción
-                </Button>
-            </DialogTrigger>
+        <Dialog open={open} onOpenChange={handleOpenChange}>
+            {!hideTrigger && (
+                <DialogTrigger asChild>
+                    <Button
+                        size="sm"
+                        onClick={() => triggerHaptic("light")}
+                        className={cn(
+                            "gap-2 bg-emerald-600 hover:bg-emerald-700 text-white w-full max-w-[280px] sm:w-auto justify-center active:scale-95 transition-all duration-100 touch-manipulation",
+                            triggerClassName
+                        )}
+                    >
+                        <Plus size={16} /> Nueva Transacción
+                    </Button>
+                </DialogTrigger>
+            )}
             <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>Nueva Transacción</DialogTitle>

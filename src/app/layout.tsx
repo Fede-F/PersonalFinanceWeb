@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/sonner"
 import { ThemeProvider } from "@/components/theme-provider"
 import { PwaRegister } from "@/components/pwa-register";
 import { LoadingProvider } from "@/components/loading-provider"
+import { PrivacyProvider } from "@/components/privacy-provider"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -54,7 +55,9 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <LoadingProvider>
-            {children}
+            <PrivacyProvider>
+              {children}
+            </PrivacyProvider>
           </LoadingProvider>
           <PwaRegister />
           <Toaster richColors position="top-right" />

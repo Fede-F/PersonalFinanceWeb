@@ -167,6 +167,57 @@ export const conceptBlacklist = pgTable("concept_blacklist", {
     uniqueWorkspaceConcept: unique().on(t.workspaceId, t.concept),
 }));
 
+// --- Investments Module Tables ---
+
+export const investmentAssets = pgTable("investment_assets", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }), // null = global/system asset
+    symbol: varchar("symbol", { length: 20 }).notNull(), // e.g. 'BTC', 'AAPL', 'SPY.BA'
+    name: text("name").notNull(), // e.g. 'Bitcoin', 'Apple Inc', 'SPDR S&P 500 ETF (CEDEAR)'
+    assetType: varchar("asset_type", { length: 20 }).notNull().default("STOCK"), // 'CRYPTO', 'STOCK', 'ETF', 'CEDEAR', 'BOND', 'OTHER'
+    defaultCurrency: varchar("default_currency", { length: 3 }).notNull().default("USD").references(() => supportedCurrencies.code),
+    icon: text("icon"),
+    isActive: boolean("is_active").default(true).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const investmentTransactions = pgTable("investment_transactions", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    assetId: uuid("asset_id").notNull().references(() => investmentAssets.id, { onDelete: 'cascade' }),
+    type: varchar("type", { length: 20 }).notNull().default("BUY"), // 'BUY', 'SELL', 'DIVIDEND'
+    quantity: text("quantity").notNull(), // Encrypted: quantity of shares/tokens
+    unitPrice: text("unit_price").notNull(), // Encrypted: price per unit in 'currency'
+    totalAmount: text("total_amount").notNull(), // Encrypted: total spent/received
+    currency: varchar("currency", { length: 3 }).notNull().references(() => supportedCurrencies.code),
+    exchangeRate: decimal("exchange_rate", { precision: 20, scale: 10 }).notNull().default("1.0"), // Snapshot at transaction time
+    fees: text("fees"), // Encrypted: comisiones
+    date: timestamp("date").notNull().defaultNow(),
+    notes: text("notes"),
+    createdById: uuid("created_by_id").references(() => users.id, { onDelete: 'set null' }),
+    linkedTransactionId: uuid("linked_transaction_id").references(() => transactions.id, { onDelete: 'set null' }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const assetMarketPrices = pgTable("asset_market_prices", {
+    symbol: varchar("symbol", { length: 20 }).primaryKey(), // e.g. 'BTC', 'AAPL', 'SPY.BA'
+    name: text("name"),
+    assetType: varchar("asset_type", { length: 20 }),
+    price: decimal("price", { precision: 20, scale: 6 }).notNull(),
+    currency: varchar("currency", { length: 3 }).notNull(), // 'USD', 'ARS'
+    change24hPct: decimal("change_24h_pct", { precision: 8, scale: 4 }),
+    lastUpdated: timestamp("last_updated").notNull().defaultNow(),
+});
+
+export const assetPriceHistory = pgTable("asset_price_history", {
+    symbol: varchar("symbol", { length: 20 }).notNull(),
+    date: varchar("date", { length: 10 }).notNull(), // 'YYYY-MM-DD'
+    closePrice: decimal("close_price", { precision: 20, scale: 6 }).notNull(),
+    currency: varchar("currency", { length: 3 }).notNull(),
+}, (t) => ({
+    pk: primaryKey({ columns: [t.symbol, t.date] }),
+}));
 
 export const accountsRelations = relations(accounts, ({ one }) => ({
     user: one(users, {
@@ -191,6 +242,7 @@ export const userRelations = relations(users, ({ many }) => ({
     ownedWorkspaces: many(workspaces),
     notifications: many(notifications),
     createdTransactions: many(transactions),
+    createdInvestments: many(investmentTransactions),
 }));
 
 export const workspaceRelations = relations(workspaces, ({ one, many }) => ({
@@ -203,6 +255,8 @@ export const workspaceRelations = relations(workspaces, ({ one, many }) => ({
     categories: many(categories),
     transactions: many(transactions),
     conceptBlacklist: many(conceptBlacklist),
+    investmentAssets: many(investmentAssets),
+    investmentTransactions: many(investmentTransactions),
 }));
 
 export const conceptBlacklistRelations = relations(conceptBlacklist, ({ one }) => ({
@@ -262,5 +316,32 @@ export const notificationRelations = relations(notifications, ({ one }) => ({
     user: one(users, {
         fields: [notifications.userId],
         references: [users.id],
+    }),
+}));
+
+export const investmentAssetRelations = relations(investmentAssets, ({ one, many }) => ({
+    workspace: one(workspaces, {
+        fields: [investmentAssets.workspaceId],
+        references: [workspaces.id],
+    }),
+    transactions: many(investmentTransactions),
+}));
+
+export const investmentTransactionRelations = relations(investmentTransactions, ({ one }) => ({
+    workspace: one(workspaces, {
+        fields: [investmentTransactions.workspaceId],
+        references: [workspaces.id],
+    }),
+    asset: one(investmentAssets, {
+        fields: [investmentTransactions.assetId],
+        references: [investmentAssets.id],
+    }),
+    creator: one(users, {
+        fields: [investmentTransactions.createdById],
+        references: [users.id],
+    }),
+    linkedTransaction: one(transactions, {
+        fields: [investmentTransactions.linkedTransactionId],
+        references: [transactions.id],
     }),
 }));

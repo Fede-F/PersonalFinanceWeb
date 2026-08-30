@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils"
 import { Card } from "@/components/ui/card"
 import { EditTransactionModal } from "./edit-transaction-modal"
 import { DeleteTransactionDialog } from "./delete-transaction-dialog"
+import { MaskedValue } from "./privacy-provider"
 import {
     DropdownMenu,
     DropdownMenuTrigger,
@@ -140,16 +141,16 @@ export function ActivityList({
                                             tx.type === 'EXPENSE' ? "text-rose-600" :
                                             "text-zinc-900 dark:text-zinc-100"
                                         )}>
-                                            {tx.type === 'INCOME' ? '+' : '-'}{tx.currency} {parseFloat(tx.amount).toLocaleString("es-AR")}
+                                            <MaskedValue value={`${tx.type === 'INCOME' ? '+' : '-'}${tx.currency} ${parseFloat(tx.amount).toLocaleString("es-AR")}`} />
                                         </p>
                                         {tx.currency !== preferredCurrency && (
                                             <p className="text-[9px] sm:text-[10px] text-zinc-400 font-bold uppercase tracking-tighter mt-1 leading-none">
-                                                ≈ {preferredCurrency} {tx.amountInPreferred.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                                                ≈ <MaskedValue value={`${preferredCurrency} ${tx.amountInPreferred.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`} />
                                             </p>
                                         )}
                                         {tx.currency !== "USD" && preferredCurrency !== "USD" && (
                                             <p className="text-[9px] sm:text-[10px] text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-tighter mt-1 leading-none">
-                                                ≈ USD {tx.amountInUSD.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                                                ≈ <MaskedValue value={`USD ${tx.amountInUSD.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`} />
                                             </p>
                                         )}
                                     </div>
