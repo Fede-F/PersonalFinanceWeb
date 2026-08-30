@@ -8,11 +8,18 @@ import { MaskedValue } from "@/components/privacy-provider"
 import { useInvestmentCurrency } from "./investment-currency-provider"
 import { formatCurrency, formatQuantity, formatPercentage } from "@/lib/formatters"
 import { triggerHaptic } from "@/lib/haptics"
-import { TrendingUp, TrendingDown, Coins, Briefcase, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
+import { TrendingUp, TrendingDown, Coins, Briefcase, ArrowUpDown, ArrowUp, ArrowDown, DollarSign } from "lucide-react"
 
 interface HoldingsListProps {
     holdings: HoldingPosition[]
     baseCurrency: string
+    onUpdatePrice?: (asset: {
+        assetId: string
+        symbol: string
+        name: string
+        currentPrice: number
+        currency: string
+    }) => void
 }
 
 const TYPE_COLORS: Record<string, string> = {
@@ -21,6 +28,7 @@ const TYPE_COLORS: Record<string, string> = {
     ETF: "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/30",
     CEDEAR: "bg-purple-500/15 text-purple-800 dark:text-purple-300 border-purple-500/30",
     BOND: "bg-cyan-500/15 text-cyan-800 dark:text-cyan-300 border-cyan-500/30",
+    FCI: "bg-indigo-500/15 text-indigo-800 dark:text-indigo-300 border-indigo-500/30",
     OTHER: "bg-zinc-500/15 text-zinc-800 dark:text-zinc-300 border-zinc-500/30",
 }
 
@@ -30,6 +38,7 @@ const TYPE_AVATAR_COLORS: Record<string, string> = {
     ETF: "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/30",
     CEDEAR: "bg-purple-500/15 text-purple-800 dark:text-purple-300 border-purple-500/30",
     BOND: "bg-cyan-500/15 text-cyan-800 dark:text-cyan-300 border-cyan-500/30",
+    FCI: "bg-indigo-500/15 text-indigo-800 dark:text-indigo-300 border-indigo-500/30",
     OTHER: "bg-zinc-500/15 text-zinc-800 dark:text-zinc-300 border-zinc-500/30",
 }
 
@@ -39,12 +48,13 @@ const TYPE_LABELS: Record<string, string> = {
     ETF: "ETF",
     CEDEAR: "CEDEAR",
     BOND: "Bono",
+    FCI: "FCI",
     OTHER: "Otro",
 }
 
 type SortField = "symbol" | "quantity" | "avgBuyPrice" | "currentPrice" | "currentValue" | "pnl"
 
-export function HoldingsList({ holdings, baseCurrency }: HoldingsListProps) {
+export function HoldingsList({ holdings, baseCurrency, onUpdatePrice }: HoldingsListProps) {
     const { isUSD, selectedCurrency } = useInvestmentCurrency()
     const activeCurrency = isUSD ? "USD" : baseCurrency
 
@@ -186,7 +196,7 @@ export function HoldingsList({ holdings, baseCurrency }: HoldingsListProps) {
                                                     {h.symbol.slice(0, 3)}
                                                 </div>
                                                 <div>
-                                                    <div className="flex items-center gap-2">
+                                                    <div className="flex items-center gap-1.5">
                                                         <span className="font-bold text-sm text-zinc-900 dark:text-zinc-100">
                                                             {h.symbol}
                                                         </span>
@@ -198,6 +208,25 @@ export function HoldingsList({ holdings, baseCurrency }: HoldingsListProps) {
                                                         >
                                                             {TYPE_LABELS[h.assetType] || h.assetType}
                                                         </Badge>
+                                                        {onUpdatePrice && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    triggerHaptic("light")
+                                                                    onUpdatePrice({
+                                                                        assetId: h.assetId,
+                                                                        symbol: h.symbol,
+                                                                        name: h.name,
+                                                                        currentPrice,
+                                                                        currency: activeCurrency,
+                                                                    })
+                                                                }}
+                                                                className="p-1 rounded-md text-zinc-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors cursor-pointer"
+                                                                title="Actualizar cotización / valuación"
+                                                            >
+                                                                <DollarSign className="w-3 h-3" />
+                                                            </button>
+                                                        )}
                                                     </div>
                                                     <span className="text-[11px] text-zinc-400 truncate max-w-xs block">
                                                         {h.name}
@@ -299,6 +328,25 @@ export function HoldingsList({ holdings, baseCurrency }: HoldingsListProps) {
                                                 >
                                                     {TYPE_LABELS[h.assetType] || h.assetType}
                                                 </Badge>
+                                                {onUpdatePrice && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            triggerHaptic("light")
+                                                            onUpdatePrice({
+                                                                assetId: h.assetId,
+                                                                symbol: h.symbol,
+                                                                name: h.name,
+                                                                currentPrice,
+                                                                currency: activeCurrency,
+                                                            })
+                                                        }}
+                                                        className="p-1 rounded-md text-zinc-400 hover:text-emerald-600 active:scale-90 transition-transform"
+                                                        title="Actualizar cotización"
+                                                    >
+                                                        <DollarSign className="w-3 h-3" />
+                                                    </button>
+                                                )}
                                             </div>
                                             <span className="text-[11px] text-zinc-400 truncate max-w-[180px] block">
                                                 {h.name}

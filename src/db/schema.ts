@@ -169,6 +169,16 @@ export const conceptBlacklist = pgTable("concept_blacklist", {
 
 // --- Investments Module Tables ---
 
+export const investmentCategories = pgTable("investment_categories", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }), // null = global/system
+    name: varchar("name", { length: 50 }).notNull(), // e.g. 'CRYPTO', 'CEDEAR', 'INMUEBLES'
+    label: text("label").notNull(), // e.g. 'Criptomonedas', 'Bienes Raíces'
+    color: varchar("color", { length: 20 }).notNull().default("#8b5cf6"),
+    isSystem: boolean("is_system").default(false).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const investmentAssets = pgTable("investment_assets", {
     id: uuid("id").primaryKey().defaultRandom(),
     workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }), // null = global/system asset

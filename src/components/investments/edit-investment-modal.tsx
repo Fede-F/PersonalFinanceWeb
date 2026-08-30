@@ -39,18 +39,31 @@ interface EditInvestmentModalProps {
     onClose: () => void
     workspaceId: string
     transaction: EditTransactionData | null
+    categories?: { id?: string; name: string; label: string; color?: string }[]
 }
+
+const DEFAULT_CATEGORIES = [
+    { id: "CRYPTO", name: "CRYPTO", label: "Criptomonedas" },
+    { id: "CEDEAR", name: "CEDEAR", label: "CEDEARs / Arg" },
+    { id: "STOCK", name: "STOCK", label: "Acciones USA" },
+    { id: "ETF", name: "ETF", label: "ETFs" },
+    { id: "BOND", name: "BOND", label: "Bonos / Renta Fija" },
+    { id: "FCI", name: "FCI", label: "Fondos Comunes (FCI)" },
+    { id: "OTHER", name: "OTHER", label: "Otros" },
+]
 
 export function EditInvestmentModal({
     isOpen,
     onClose,
     workspaceId,
     transaction,
+    categories = DEFAULT_CATEGORIES,
 }: EditInvestmentModalProps) {
     const [quantity, setQuantity] = React.useState<string>("")
     const [unitPrice, setUnitPrice] = React.useState<string>("")
     const [totalAmount, setTotalAmount] = React.useState<string>("")
     const [currency, setCurrency] = React.useState<string>("USD")
+    const [category, setCategory] = React.useState<string>("STOCK")
     const [fees, setFees] = React.useState<string>("")
     const [date, setDate] = React.useState<string>("")
     const [notes, setNotes] = React.useState<string>("")
@@ -63,6 +76,7 @@ export function EditInvestmentModal({
             setUnitPrice(transaction.unitPrice.toString())
             setTotalAmount(transaction.totalAmount.toString())
             setCurrency(transaction.currency || "USD")
+            setCategory(transaction.assetType || "STOCK")
             setFees(transaction.fees ? transaction.fees.toString() : "0")
             const initialDate = transaction.rawDate || (transaction.date?.includes("-") ? transaction.date.split("T")[0] : new Date().toISOString().split("T")[0])
             setDate(initialDate)
@@ -155,6 +169,7 @@ export function EditInvestmentModal({
             formData.append("unitPrice", unitPrice.trim())
             formData.append("totalAmount", effectiveTotal.toString())
             formData.append("currency", currency)
+            formData.append("category", category)
             formData.append("fees", fees ? fees.trim() : "0")
             formData.append("date", date)
             formData.append("notes", notes.trim())
@@ -164,7 +179,7 @@ export function EditInvestmentModal({
                 toast.success("Operación de inversión actualizada con éxito")
                 onClose()
             } else {
-                toast.error(res.error || "Error al actualizar la operación")
+                toast.error(res.error || "Error al actualizar transacción")
             }
         } catch (err) {
             toast.error("Error al procesar la actualización")
@@ -200,7 +215,7 @@ export function EditInvestmentModal({
                                     {transaction.symbol} - {transaction.name}
                                 </span>
                                 <span className="text-[11px] text-zinc-500 font-medium">
-                                    Tipo: {transaction.type === "BUY" ? "Compra" : "Venta"} ({transaction.assetType})
+                                    Tipo: {transaction.type === "BUY" ? "Compra" : "Venta"}
                                 </span>
                             </div>
                         </div>
@@ -211,6 +226,25 @@ export function EditInvestmentModal({
                                 Vinculado a Gastos
                             </Badge>
                         )}
+                    </div>
+
+                    {/* Category Selector */}
+                    <div className="space-y-1.5">
+                        <Label htmlFor="edit-category" className="text-xs font-semibold">
+                            Categoría del Activo
+                        </Label>
+                        <select
+                            id="edit-category"
+                            value={category}
+                            onChange={(e) => setCategory(e.target.value)}
+                            className="w-full h-9 text-xs rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 text-zinc-900 dark:text-zinc-50 font-medium focus:ring-1 focus:ring-emerald-500 focus:outline-hidden"
+                        >
+                            {categories.map((c) => (
+                                <option key={c.name} value={c.name}>
+                                    {c.label}
+                                </option>
+                            ))}
+                        </select>
                     </div>
 
                     {/* Quantity and Unit Price */}

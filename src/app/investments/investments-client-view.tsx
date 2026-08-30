@@ -8,6 +8,8 @@ import { CategoryPerformanceSummary } from "@/components/investments/category-pe
 import { HoldingsList } from "@/components/investments/holdings-list"
 import { InvestmentHistory } from "@/components/investments/investment-history"
 import { InvestmentModal } from "@/components/investments/investment-modal"
+import { ManageCategoriesModal } from "@/components/investments/manage-categories-modal"
+import { UpdateAssetPriceModal, UpdatePriceAssetData } from "@/components/investments/update-asset-price-modal"
 import { PullToRefresh } from "@/components/investments/pull-to-refresh"
 import { Button } from "@/components/ui/button"
 import { WorkspaceSwitcher } from "@/components/workspace-switcher"
@@ -21,7 +23,7 @@ import { InvestmentCurrencyProvider } from "@/components/investments/investment-
 import { InvestmentCurrencyToggle } from "@/components/investments/investment-currency-toggle"
 import { Skeleton } from "@/components/ui/skeleton"
 import { triggerHaptic } from "@/lib/haptics"
-import { Plus, TrendingUp, LayoutDashboard } from "lucide-react"
+import { Plus, TrendingUp, LayoutDashboard, Layers } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
@@ -61,6 +63,8 @@ export function InvestmentsClientView({
 }: InvestmentsClientViewProps) {
     const router = useRouter()
     const [isModalOpen, setIsModalOpen] = React.useState(false)
+    const [isCategoriesModalOpen, setIsCategoriesModalOpen] = React.useState(false)
+    const [updatePriceAsset, setUpdatePriceAsset] = React.useState<UpdatePriceAssetData | null>(null)
     const [timeRange, setTimeRange] = React.useState(initialTimeRange || "1M")
 
     const handleRangeChange = (newRange: string) => {
@@ -111,9 +115,6 @@ export function InvestmentsClientView({
                             </div>
 
                             <div className="ml-auto flex items-center gap-1 sm:gap-2.5">
-                                {/* Multimoneda Toggle (Responsive) */}
-                                <InvestmentCurrencyToggle />
-                                
                                 {/* Privacy Mode Toggle */}
                                 <PrivacyToggle />
 
@@ -140,24 +141,37 @@ export function InvestmentsClientView({
                                         Portafolio de Inversiones
                                     </h1>
                                     <p className="text-xs text-zinc-500 mt-0.5">
-                                        Seguimiento en vivo de Cripto, Acciones de USA y CEDEARs
+                                        Seguimiento en vivo de Cripto, Acciones de USA, CEDEARs y FCIs
                                     </p>
                                 </div>
 
-                                <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
-                                    <InvestmentCurrencyToggle />
-                                    <div className="hidden sm:flex items-center">
-                                        <Button
-                                            onClick={() => {
-                                                triggerHaptic("light")
-                                                setIsModalOpen(true)
-                                            }}
-                                            className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 text-xs h-9 px-3.5 font-semibold shadow-xs active:scale-95 transition-all duration-100 touch-manipulation cursor-pointer"
-                                        >
-                                            <Plus className="w-4 h-4" />
-                                            Nueva Inversión
-                                        </Button>
-                                    </div>
+                                {/* Controls grouped together */}
+                                <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+                                    <InvestmentCurrencyToggle showLabel={true} labelText="Moneda a mostrar:" />
+
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => {
+                                            triggerHaptic("light")
+                                            setIsCategoriesModalOpen(true)
+                                        }}
+                                        className="gap-1.5 text-xs h-9 px-3 font-semibold active:scale-95 transition-all duration-100 touch-manipulation cursor-pointer"
+                                        title="Gestionar categorías del portafolio"
+                                    >
+                                        <Layers className="w-3.5 h-3.5 text-emerald-500" />
+                                        <span>Categorías</span>
+                                    </Button>
+
+                                    <Button
+                                        onClick={() => {
+                                            triggerHaptic("light")
+                                            setIsModalOpen(true)
+                                        }}
+                                        className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 text-xs h-9 px-3.5 font-semibold shadow-xs active:scale-95 transition-all duration-100 touch-manipulation cursor-pointer hidden sm:flex"
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                        Nueva Inversión
+                                    </Button>
                                 </div>
                             </div>
 
@@ -212,6 +226,7 @@ export function InvestmentsClientView({
                             <HoldingsList
                                 holdings={initialData.holdings}
                                 baseCurrency={baseCurrency}
+                                onUpdatePrice={setUpdatePriceAsset}
                             />
 
                             {/* 5. History */}
@@ -219,6 +234,7 @@ export function InvestmentsClientView({
                                 transactions={initialData.recentTransactions}
                                 workspaceId={currentWorkspace.id}
                                 baseCurrency={baseCurrency}
+                                categories={initialData.categories}
                             />
                         </main>
                     </div>
@@ -237,6 +253,23 @@ export function InvestmentsClientView({
                         availableAssets={initialData.availableAssets}
                         userWorkspaces={userWorkspaces}
                         baseCurrency={baseCurrency}
+                        categories={initialData.categories}
+                    />
+
+                    {/* Manage Categories Modal */}
+                    <ManageCategoriesModal
+                        isOpen={isCategoriesModalOpen}
+                        onClose={() => setIsCategoriesModalOpen(false)}
+                        workspaceId={currentWorkspace.id}
+                        categories={initialData.categories || []}
+                    />
+
+                    {/* Manual Price / Valuation Update Modal */}
+                    <UpdateAssetPriceModal
+                        isOpen={!!updatePriceAsset}
+                        onClose={() => setUpdatePriceAsset(null)}
+                        workspaceId={currentWorkspace.id}
+                        asset={updatePriceAsset}
                     />
                 </div>
             </PullToRefresh>

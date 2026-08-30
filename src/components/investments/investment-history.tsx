@@ -45,6 +45,7 @@ interface InvestmentHistoryProps {
     }[]
     workspaceId: string
     baseCurrency: string
+    categories?: { id: string; name: string; label: string; color?: string }[]
 }
 
 const TYPE_COLORS: Record<string, string> = {
@@ -53,6 +54,7 @@ const TYPE_COLORS: Record<string, string> = {
     ETF: "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/30",
     CEDEAR: "bg-purple-500/15 text-purple-800 dark:text-purple-300 border-purple-500/30",
     BOND: "bg-cyan-500/15 text-cyan-800 dark:text-cyan-300 border-cyan-500/30",
+    FCI: "bg-indigo-500/15 text-indigo-800 dark:text-indigo-300 border-indigo-500/30",
     OTHER: "bg-zinc-500/15 text-zinc-800 dark:text-zinc-300 border-zinc-500/30",
 }
 
@@ -62,6 +64,7 @@ export function InvestmentHistory({
     transactions,
     workspaceId,
     baseCurrency,
+    categories,
 }: InvestmentHistoryProps) {
     const { isUSD, activeCurrency } = useInvestmentCurrency()
     const [editingTx, setEditingTx] = React.useState<EditTransactionData | null>(null)
@@ -331,6 +334,7 @@ export function InvestmentHistory({
                 onClose={() => setEditingTx(null)}
                 workspaceId={workspaceId}
                 transaction={editingTx}
+                categories={categories}
             />
 
             {/* Delete Confirmation Dialog */}

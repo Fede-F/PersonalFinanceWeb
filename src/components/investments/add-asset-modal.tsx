@@ -21,13 +21,25 @@ interface AddAssetModalProps {
     onClose: () => void
     workspaceId: string
     onAssetCreated?: (asset: any) => void
+    categories?: { id?: string; name: string; label: string }[]
 }
+
+const DEFAULT_CATEGORIES = [
+    { id: "CRYPTO", name: "CRYPTO", label: "Criptomoneda" },
+    { id: "CEDEAR", name: "CEDEAR", label: "CEDEAR (Argentina)" },
+    { id: "STOCK", name: "STOCK", label: "Acción (USA)" },
+    { id: "ETF", name: "ETF", label: "ETF (Fondo Cotizado)" },
+    { id: "BOND", name: "BOND", label: "Bono / Renta Fija" },
+    { id: "FCI", name: "FCI", label: "Fondo Común de Inversión (FCI)" },
+    { id: "OTHER", name: "OTHER", label: "Otro" },
+]
 
 export function AddAssetModal({
     isOpen,
     onClose,
     workspaceId,
     onAssetCreated,
+    categories = DEFAULT_CATEGORIES,
 }: AddAssetModalProps) {
     const [symbol, setSymbol] = React.useState("")
     const [name, setName] = React.useState("")
@@ -123,12 +135,11 @@ export function AddAssetModal({
                                 onChange={(e) => setAssetType(e.target.value)}
                                 className="w-full h-9 text-xs rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 text-zinc-900 dark:text-zinc-50 focus:ring-1 focus:ring-emerald-500 focus:outline-hidden"
                             >
-                                <option value="CRYPTO">Criptomoneda</option>
-                                <option value="STOCK">Acción (USA)</option>
-                                <option value="ETF">ETF (Fondo Cotizado)</option>
-                                <option value="CEDEAR">CEDEAR (Argentina)</option>
-                                <option value="BOND">Bono / Renta Fija</option>
-                                <option value="OTHER">Otro</option>
+                                {categories.map((c) => (
+                                    <option key={c.name} value={c.name}>
+                                        {c.label}
+                                    </option>
+                                ))}
                             </select>
                         </div>
 

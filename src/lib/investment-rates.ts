@@ -131,6 +131,107 @@ async function fetchStockPrices(symbols: string[]): Promise<AssetPriceInfo[]> {
     return results
 }
 
+export const KNOWN_FCI_TICKERS: Record<string, string> = {
+    DFSACCA: "Delta Select - Clase A",
+    DFSACCB: "Delta Select - Clase B",
+    RJMULIA: "RJ Delta Multimercado - Clase A",
+    RJMULIB: "RJ Delta Multimercado - Clase B",
+    DELACCA: "Delta Acciones - Clase A",
+    DELACCB: "Delta Acciones - Clase B",
+    DELAHPA: "Delta Ahorro Plus - Clase A",
+    DELAHOA: "Delta Ahorro - Clase A",
+    FIMPREA: "Fima Premium - Clase A",
+    FIMPREB: "Fima Premium - Clase B",
+    BALACCA: "Balanz Acciones - Clase A",
+    BALEQSA: "Balanz Equity Selection - Clase A",
+    GALACCA: "Galileo Acciones - Clase A",
+    GALAHRA: "Galileo Ahorro - Clase A",
+    CONAHRA: "Consultatio Ahorro Plus - Clase A",
+    CONACCA: "Consultatio Acciones Argentina - Clase A",
+    SBSACCA: "SBS Acciones Argentina - Clase A",
+    SCHPREA: "Schroders Argentina - Clase A",
+}
+
+interface FciItem {
+    fondo: string
+    vcp: number
+    fecha: string
+    category: string
+}
+
+let fciCatalogCache: { data: FciItem[]; timestamp: number } | null = null
+
+export async function getFciCatalog(): Promise<FciItem[]> {
+    const now = Date.now()
+    if (fciCatalogCache && now - fciCatalogCache.timestamp < 60 * 60 * 1000) {
+        return fciCatalogCache.data
+    }
+
+    const categories = ["rentaVariable", "rentaFija", "rentaMixta", "mercadoDinero"]
+    const allItems: FciItem[] = []
+
+    await Promise.allSettled(
+        categories.map(async (cat) => {
+            try {
+                const res = await fetch(`https://api.argentinadatos.com/v1/finanzas/fci/${cat}/ultimo`, {
+                    next: { revalidate: 3600 },
+                })
+                if (res.ok) {
+                    const list: any[] = await res.json()
+                    if (Array.isArray(list)) {
+                        for (const item of list) {
+                            if (item.fondo && typeof item.vcp === "number") {
+                                allItems.push({
+                                    fondo: item.fondo,
+                                    vcp: item.vcp,
+                                    fecha: item.fecha,
+                                    category: cat,
+                                })
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                console.warn(`Error fetching FCI category ${cat}:`, err)
+            }
+        })
+    )
+
+    if (allItems.length > 0) {
+        fciCatalogCache = { data: allItems, timestamp: now }
+    }
+
+    return allItems.length > 0 ? allItems : (fciCatalogCache?.data || [])
+}
+
+async function fetchFciPrices(symbols: string[]): Promise<AssetPriceInfo[]> {
+    const catalog = await getFciCatalog()
+    if (catalog.length === 0) return []
+
+    const results: AssetPriceInfo[] = []
+    for (const sym of symbols) {
+        const upperSym = sym.toUpperCase().trim()
+        const knownName = KNOWN_FCI_TICKERS[upperSym]
+
+        const match = catalog.find((f) => {
+            if (knownName && f.fondo.toUpperCase().includes(knownName.toUpperCase())) return true
+            if (f.fondo.toUpperCase() === upperSym) return true
+            if (f.fondo.toUpperCase().replace(/[^A-Z0-9]/g, "").includes(upperSym.replace(/[^A-Z0-9]/g, ""))) return true
+            return false
+        })
+
+        if (match) {
+            results.push({
+                symbol: sym,
+                price: match.vcp,
+                currency: "ARS",
+                name: match.fondo,
+            })
+        }
+    }
+    return results
+}
+
 /**
  * Fetches historical daily prices for a given symbol from Yahoo Finance or CoinGecko
  */
@@ -274,12 +375,13 @@ export async function getOrUpdateAssetPrices(
         // Run update asynchronously
         const updatePromise = (async () => {
             try {
-                const [cryptoResults, stockResults] = await Promise.all([
+                const [cryptoResults, stockResults, fciResults] = await Promise.all([
                     fetchCryptoPrices(expiredSymbols),
                     fetchStockPrices(expiredSymbols),
+                    fetchFciPrices(expiredSymbols),
                 ])
 
-                const allFetched = [...cryptoResults, ...stockResults]
+                const allFetched = [...cryptoResults, ...stockResults, ...fciResults]
                 const todayStr = new Date().toISOString().split("T")[0]
 
                 if (allFetched.length > 0) {
@@ -384,7 +486,7 @@ export interface MarketSearchResult {
     id?: string
     symbol: string
     name: string
-    assetType: "CRYPTO" | "STOCK" | "ETF" | "CEDEAR" | "BOND" | "OTHER"
+    assetType: "CRYPTO" | "STOCK" | "ETF" | "CEDEAR" | "BOND" | "FCI" | "OTHER" | string
     defaultCurrency: string
     currentPrice?: number
     change24hPct?: number
@@ -393,7 +495,7 @@ export interface MarketSearchResult {
 }
 
 /**
- * Searches online market assets via Yahoo Finance and CoinGecko
+ * Searches online market assets via Yahoo Finance, CoinGecko and ArgentinaDatos FCIs
  */
 export async function searchOnlineMarketAssets(query: string): Promise<MarketSearchResult[]> {
     const q = query.trim()
@@ -422,13 +524,30 @@ export async function searchOnlineMarketAssets(query: string): Promise<MarketSea
                     if (!sym || seenSymbols.has(sym)) continue
                     seenSymbols.add(sym)
 
-                    let assetType: "CRYPTO" | "STOCK" | "ETF" | "CEDEAR" | "BOND" | "OTHER" = "STOCK"
+                    let assetType: "CRYPTO" | "STOCK" | "ETF" | "CEDEAR" | "BOND" | "FCI" | "OTHER" = "STOCK"
                     let currency = "USD"
 
+                    const ARG_LOCAL_STOCKS = new Set([
+                        "GGAL.BA", "YPFD.BA", "PAMP.BA", "ALUA.BA", "TXAR.BA", "BMA.BA", "BBAR.BA",
+                        "CEPU.BA", "CRES.BA", "EDN.BA", "SUPV.BA", "VALO.BA", "LOMA.BA", "MIRG.BA",
+                        "TGSU2.BA", "TGNO4.BA", "TRAN.BA", "MORI.BA", "COME.BA", "CVH.BA", "BYMA.BA",
+                        "AGRO.BA", "AUSO.BA", "BHIP.BA", "BOLT.BA", "BPAT.BA", "CADO.BA", "CAPX.BA",
+                        "CARC.BA", "CELU.BA", "CGPA2.BA", "CTIO.BA", "DGCU2.BA", "FERR.BA", "GCLA.BA",
+                        "GRIM.BA", "HARG.BA", "HAVA.BA", "INTR.BA", "INVJ.BA", "IRSA.BA", "LEDE.BA",
+                        "LONG.BA", "METR.BA", "MOLI.BA", "OEST.BA", "PATA.BA", "POLL.BA", "RIGO.BA",
+                        "SAMI.BA", "SEMI.BA", "TECO2.BA"
+                    ])
+
                     if (sym.endsWith(".BA") || item.exchange === "BUE") {
-                        assetType = sym.includes("SPY") || sym.includes("QQQ") || sym.includes("AAPL") || sym.includes("NVDA") || sym.includes("MELI") || sym.includes("KO")
-                            ? "CEDEAR"
-                            : "STOCK"
+                        const rawName = `${item.shortname || ""} ${item.longname || ""}`.toUpperCase()
+                        const isCedearByName = rawName.includes("CEDEAR") || rawName.includes("CDR") || rawName.includes("REP") || rawName.includes("TRUST")
+                        const isKnownLocal = ARG_LOCAL_STOCKS.has(sym)
+
+                        if (isCedearByName || !isKnownLocal) {
+                            assetType = "CEDEAR"
+                        } else {
+                            assetType = "STOCK"
+                        }
                         currency = "ARS"
                     } else if (item.quoteType === "ETF") {
                         assetType = "ETF"
@@ -481,9 +600,47 @@ export async function searchOnlineMarketAssets(query: string): Promise<MarketSea
         }
     })()
 
-    await Promise.allSettled([yahooPromise, coinGeckoPromise])
+    // 3. Fondos Comunes de Inversión (FCI) Search
+    const fciPromise = (async () => {
+        try {
+            const catalog = await getFciCatalog()
+            const upperQ = q.toUpperCase().trim()
 
-    // 3. Populate live prices from cache/online for top candidates
+            const matchedFunds = catalog.filter((f) => {
+                const name = f.fondo.toUpperCase()
+                if (name.includes(upperQ)) return true
+                for (const [ticker, fondoName] of Object.entries(KNOWN_FCI_TICKERS)) {
+                    if ((ticker.includes(upperQ) || upperQ.includes(ticker)) && name.includes(fondoName.toUpperCase())) {
+                        return true
+                    }
+                }
+                return false
+            }).slice(0, 5)
+
+            for (const f of matchedFunds) {
+                let sym = Object.entries(KNOWN_FCI_TICKERS).find(([_, n]) => f.fondo.toUpperCase().includes(n.toUpperCase()))?.[0]
+                if (!sym) {
+                    sym = f.fondo.replace(/[^A-Za-z0-9]/g, "").slice(0, 10).toUpperCase()
+                }
+                if (!seenSymbols.has(sym)) {
+                    seenSymbols.add(sym)
+                    results.push({
+                        symbol: sym,
+                        name: f.fondo,
+                        assetType: "FCI",
+                        defaultCurrency: "ARS",
+                        currentPrice: f.vcp,
+                    })
+                }
+            }
+        } catch (err) {
+            console.error("Error searching FCIs:", err)
+        }
+    })()
+
+    await Promise.allSettled([yahooPromise, coinGeckoPromise, fciPromise])
+
+    // 4. Populate live prices from cache/online for top candidates
     const symbolsToPrice = results.slice(0, 8).map((r) => r.symbol)
     if (symbolsToPrice.length > 0) {
         const prices = await getOrUpdateAssetPrices(symbolsToPrice)

@@ -36,6 +36,24 @@ const CATEGORY_META: Record<string, { label: string; icon: any; color: string; b
         color: "text-emerald-800 dark:text-emerald-300",
         bgColor: "bg-emerald-500/10 border-emerald-500/20 dark:bg-emerald-500/15",
     },
+    BOND: {
+        label: "Bonos / Renta Fija",
+        icon: Building2,
+        color: "text-cyan-800 dark:text-cyan-300",
+        bgColor: "bg-cyan-500/10 border-cyan-500/20 dark:bg-cyan-500/15",
+    },
+    FCI: {
+        label: "Fondos Comunes (FCI)",
+        icon: BarChart2,
+        color: "text-indigo-800 dark:text-indigo-300",
+        bgColor: "bg-indigo-500/10 border-indigo-500/20 dark:bg-indigo-500/15",
+    },
+    OTHER: {
+        label: "Otros",
+        icon: Building2,
+        color: "text-zinc-800 dark:text-zinc-300",
+        bgColor: "bg-zinc-500/10 border-zinc-500/20 dark:bg-zinc-500/15",
+    },
 }
 
 export function CategoryPerformanceSummary({ holdings }: CategoryPerformanceSummaryProps) {

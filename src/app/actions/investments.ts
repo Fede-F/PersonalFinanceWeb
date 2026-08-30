@@ -5,6 +5,9 @@ import { db } from "@/db"
 import {
     investmentAssets,
     investmentTransactions,
+    investmentCategories,
+    assetMarketPrices,
+    assetPriceHistory,
     workspaces,
     workspaceMembers,
     supportedCurrencies,
@@ -12,7 +15,7 @@ import {
     transactions,
     categories,
 } from "@/db/schema"
-import { eq, and, desc, asc, inArray, sql, isNull, or, ilike } from "drizzle-orm"
+import { eq, and, desc, asc, inArray, sql, isNull, or, ilike, count } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { encryptAmount, decryptAmount } from "@/lib/encryption"
 import { getOrUpdateAssetPrices, getAssetHistory, searchOnlineMarketAssets, MarketSearchResult } from "@/lib/investment-rates"
@@ -357,6 +360,213 @@ export async function createCustomAsset(formData: FormData) {
     }
 }
 
+export async function getInvestmentCategories(workspaceId: string) {
+    try {
+        const session = await auth()
+        if (!session?.user?.id) return { success: false, error: "No autorizado" }
+
+        const rows = await db
+            .select()
+            .from(investmentCategories)
+            .where(or(isNull(investmentCategories.workspaceId), eq(investmentCategories.workspaceId, workspaceId)))
+            .orderBy(asc(investmentCategories.isSystem), asc(investmentCategories.label))
+
+        return { success: true, categories: rows }
+    } catch (err: any) {
+        console.error("Error fetching categories:", err)
+        return { success: false, error: err.message || "Error al cargar categorías" }
+    }
+}
+
+export async function createInvestmentCategory(formData: FormData) {
+    try {
+        const session = await auth()
+        if (!session?.user?.id) return { success: false, error: "No autorizado" }
+
+        const workspaceId = formData.get("workspaceId") as string
+        const label = (formData.get("label") as string)?.trim()
+        const color = (formData.get("color") as string)?.trim() || "#8b5cf6"
+
+        if (!workspaceId || !label) {
+            return { success: false, error: "El nombre de la categoría es obligatorio" }
+        }
+
+        const name = label.toUpperCase().replace(/[^A-Z0-9_]/g, "_").slice(0, 30)
+
+        // Check if category already exists in workspace or system
+        const [existing] = await db
+            .select()
+            .from(investmentCategories)
+            .where(
+                and(
+                    eq(investmentCategories.name, name),
+                    or(isNull(investmentCategories.workspaceId), eq(investmentCategories.workspaceId, workspaceId))
+                )
+            )
+
+        if (existing) {
+            return { success: false, error: "Ya existe una categoría con este nombre" }
+        }
+
+        const [newCat] = await db
+            .insert(investmentCategories)
+            .values({
+                workspaceId,
+                name,
+                label,
+                color,
+                isSystem: false,
+            })
+            .returning()
+
+        revalidatePath("/investments")
+        return { success: true, category: newCat }
+    } catch (err: any) {
+        console.error("Error creating investment category:", err)
+        return { success: false, error: err.message || "Error al crear la categoría" }
+    }
+}
+
+export async function updateInvestmentCategory(formData: FormData) {
+    try {
+        const session = await auth()
+        if (!session?.user?.id) return { success: false, error: "No autorizado" }
+
+        const id = formData.get("id") as string
+        const workspaceId = formData.get("workspaceId") as string
+        const label = (formData.get("label") as string)?.trim()
+        const color = (formData.get("color") as string)?.trim()
+
+        if (!id || !workspaceId || !label) {
+            return { success: false, error: "Todos los campos son obligatorios" }
+        }
+
+        const [cat] = await db
+            .select()
+            .from(investmentCategories)
+            .where(and(eq(investmentCategories.id, id), eq(investmentCategories.workspaceId, workspaceId)))
+
+        if (!cat) return { success: false, error: "Categoría no encontrada o no editable" }
+        if (cat.isSystem) return { success: false, error: "Las categorías del sistema no pueden modificarse" }
+
+        const [updated] = await db
+            .update(investmentCategories)
+            .set({ label, color: color || cat.color })
+            .where(eq(investmentCategories.id, id))
+            .returning()
+
+        revalidatePath("/investments")
+        return { success: true, category: updated }
+    } catch (err: any) {
+        console.error("Error updating investment category:", err)
+        return { success: false, error: err.message || "Error al actualizar la categoría" }
+    }
+}
+
+export async function deleteInvestmentCategory(id: string, workspaceId: string) {
+    try {
+        const session = await auth()
+        if (!session?.user?.id) return { success: false, error: "No autorizado" }
+
+        const [cat] = await db
+            .select()
+            .from(investmentCategories)
+            .where(and(eq(investmentCategories.id, id), eq(investmentCategories.workspaceId, workspaceId)))
+
+        if (!cat) return { success: false, error: "Categoría no encontrada o no eliminable" }
+        if (cat.isSystem) return { success: false, error: "Las categorías del sistema no pueden eliminarse" }
+
+        // Reassign all assets in this workspace using this category to "OTHER"
+        await db
+            .update(investmentAssets)
+            .set({ assetType: "OTHER" })
+            .where(
+                and(
+                    eq(investmentAssets.assetType, cat.name),
+                    or(isNull(investmentAssets.workspaceId), eq(investmentAssets.workspaceId, workspaceId))
+                )
+            )
+
+        await db.delete(investmentCategories).where(eq(investmentCategories.id, id))
+
+        revalidatePath("/investments")
+        return { success: true }
+    } catch (err: any) {
+        console.error("Error deleting investment category:", err)
+        return { success: false, error: err.message || "Error al eliminar la categoría" }
+    }
+}
+
+export async function updateCustomAssetPrice(formData: FormData) {
+    try {
+        const session = await auth()
+        if (!session?.user?.id) return { success: false, error: "No autorizado" }
+
+        const assetId = formData.get("assetId") as string
+        const workspaceId = formData.get("workspaceId") as string
+        const priceRaw = formData.get("price") as string
+        const currency = (formData.get("currency") as string) || "USD"
+        const dateRaw = formData.get("date") as string
+
+        const price = parseFloat(priceRaw)
+        if (!assetId || isNaN(price) || price < 0) {
+            return { success: false, error: "El precio debe ser un número válido mayor o igual a 0" }
+        }
+
+        const [asset] = await db
+            .select()
+            .from(investmentAssets)
+            .where(eq(investmentAssets.id, assetId))
+
+        if (!asset) return { success: false, error: "Activo no encontrado" }
+
+        const dateStr = dateRaw || new Date().toISOString().split("T")[0]
+
+        // 1. Update/insert assetMarketPrices
+        await db
+            .insert(assetMarketPrices)
+            .values({
+                symbol: asset.symbol,
+                name: asset.name,
+                assetType: asset.assetType,
+                price: price.toFixed(6),
+                currency,
+                lastUpdated: new Date(),
+            })
+            .onConflictDoUpdate({
+                target: [assetMarketPrices.symbol],
+                set: {
+                    price: price.toFixed(6),
+                    currency,
+                    lastUpdated: new Date(),
+                },
+            })
+
+        // 2. Insert into assetPriceHistory
+        await db
+            .insert(assetPriceHistory)
+            .values({
+                symbol: asset.symbol,
+                date: dateStr,
+                closePrice: price.toFixed(6),
+                currency,
+            })
+            .onConflictDoUpdate({
+                target: [assetPriceHistory.symbol, assetPriceHistory.date],
+                set: {
+                    closePrice: price.toFixed(6),
+                    currency,
+                },
+            })
+
+        revalidatePath("/investments")
+        return { success: true }
+    } catch (err: any) {
+        console.error("Error updating custom asset price:", err)
+        return { success: false, error: err.message || "Error al actualizar la cotización" }
+    }
+}
+
 export async function createInvestmentTransaction(formData: FormData) {
     try {
         const session = await auth()
@@ -396,6 +606,11 @@ export async function createInvestmentTransaction(formData: FormData) {
             .where(eq(investmentAssets.id, assetId))
 
         if (!asset) return { success: false, error: "Activo no encontrado" }
+
+        const categoryOverride = (formData.get("category") as string || formData.get("assetType") as string)?.trim()
+        if (categoryOverride && asset.assetType !== categoryOverride) {
+            await db.update(investmentAssets).set({ assetType: categoryOverride }).where(eq(investmentAssets.id, asset.id))
+        }
 
         const quantity = parseFloat(quantityRaw)
         const unitPrice = parseFloat(unitPriceRaw)
@@ -603,7 +818,13 @@ export async function updateInvestmentTransaction(formData: FormData) {
             })
             .where(eq(investmentTransactions.id, id))
 
-        // 2. If it has a linked transaction in expenses workspace, synchronize it
+        // 2. If category override provided, update asset category
+        const categoryOverride = (formData.get("category") as string || formData.get("assetType") as string)?.trim()
+        if (categoryOverride && existing.assetId) {
+            await db.update(investmentAssets).set({ assetType: categoryOverride }).where(eq(investmentAssets.id, existing.assetId))
+        }
+
+        // 3. If it has a linked transaction in expenses workspace, synchronize it
         if (existing.linkedTransactionId) {
             await db
                 .update(transactions)
@@ -719,6 +940,14 @@ export interface InvestmentDashboardData {
         defaultCurrency: string
         icon: string | null
     }[]
+    categories: {
+        id: string
+        name: string
+        label: string
+        color: string
+        isSystem: boolean
+        assetsCount: number
+    }[]
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -727,6 +956,7 @@ const CATEGORY_COLORS: Record<string, string> = {
     ETF: "#10b981", // Emerald
     CEDEAR: "#8b5cf6", // Violet
     BOND: "#06b6d4", // Cyan
+    FCI: "#6366f1", // Indigo
     OTHER: "#6b7280", // Gray
 }
 
@@ -735,7 +965,8 @@ const CATEGORY_LABELS: Record<string, string> = {
     STOCK: "Acciones USA",
     ETF: "ETFs",
     CEDEAR: "CEDEARs / Arg",
-    BOND: "Bonos",
+    BOND: "Bonos / Renta Fija",
+    FCI: "Fondos Comunes (FCI)",
     OTHER: "Otros",
 }
 
@@ -990,13 +1221,27 @@ export async function getInvestmentsDashboardData(
             categoryGroupMap[h.assetType].usd += h.currentValueInUSD
         }
 
+        // Fetch categories for workspace and system
+        const dbCategories = await db
+            .select()
+            .from(investmentCategories)
+            .where(or(isNull(investmentCategories.workspaceId), eq(investmentCategories.workspaceId, workspaceId)))
+            .orderBy(asc(investmentCategories.isSystem), asc(investmentCategories.label))
+
+        const categoryLabels: Record<string, string> = { ...CATEGORY_LABELS }
+        const categoryColors: Record<string, string> = { ...CATEGORY_COLORS }
+        for (const cat of dbCategories) {
+            categoryLabels[cat.name] = cat.label
+            categoryColors[cat.name] = cat.color
+        }
+
         const categoryAllocation = Object.entries(categoryGroupMap).map(([cat, data]) => ({
             category: cat,
-            label: CATEGORY_LABELS[cat] || cat,
+            label: categoryLabels[cat] || cat,
             value: data.base,
             valueUSD: data.usd,
             percentage: totalPortfolioValue > 0 ? (data.base / totalPortfolioValue) * 100 : 0,
-            color: CATEGORY_COLORS[cat] || "#6b7280",
+            color: categoryColors[cat] || "#6b7280",
         }))
 
         // 9. Time series data for portfolio performance chart
@@ -1148,6 +1393,14 @@ export async function getInvestmentsDashboardData(
                 chartPoints,
                 recentTransactions,
                 availableAssets: catalogAssets,
+                categories: dbCategories.map((c) => ({
+                    id: c.id,
+                    name: c.name,
+                    label: c.label,
+                    color: c.color,
+                    isSystem: c.isSystem,
+                    assetsCount: holdings.filter((h) => h.assetType === c.name).length,
+                })),
             },
         }
     } catch (err: any) {

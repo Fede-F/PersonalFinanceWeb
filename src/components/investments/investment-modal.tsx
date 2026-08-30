@@ -43,7 +43,18 @@ interface InvestmentModalProps {
     availableAssets: AssetOption[]
     userWorkspaces: WorkspaceOption[]
     baseCurrency: string
+    categories?: { id?: string; name: string; label: string; color?: string }[]
 }
+
+const DEFAULT_CATEGORIES = [
+    { id: "CRYPTO", name: "CRYPTO", label: "Criptomonedas" },
+    { id: "CEDEAR", name: "CEDEAR", label: "CEDEARs / Arg" },
+    { id: "STOCK", name: "STOCK", label: "Acciones USA" },
+    { id: "ETF", name: "ETF", label: "ETFs" },
+    { id: "BOND", name: "BOND", label: "Bonos / Renta Fija" },
+    { id: "FCI", name: "FCI", label: "Fondos Comunes (FCI)" },
+    { id: "OTHER", name: "OTHER", label: "Otros" },
+]
 
 export function InvestmentModal({
     isOpen,
@@ -52,6 +63,7 @@ export function InvestmentModal({
     availableAssets,
     userWorkspaces,
     baseCurrency,
+    categories = DEFAULT_CATEGORIES,
 }: InvestmentModalProps) {
     const { selectedCurrency } = useInvestmentCurrency()
     const [selectedAsset, setSelectedAsset] = React.useState<MarketSearchResult | null>(null)
@@ -60,6 +72,7 @@ export function InvestmentModal({
     const [unitPrice, setUnitPrice] = React.useState<string>("")
     const [totalAmount, setTotalAmount] = React.useState<string>("")
     const [currency, setCurrency] = React.useState<string>(selectedCurrency || baseCurrency || "USD")
+    const [category, setCategory] = React.useState<string>("STOCK")
     const [fees, setFees] = React.useState<string>("")
     const [date, setDate] = React.useState<string>(() => new Date().toISOString().split("T")[0])
     const [notes, setNotes] = React.useState<string>("")
@@ -97,6 +110,7 @@ export function InvestmentModal({
     const handleSelectAsset = (asset: MarketSearchResult) => {
         setSelectedAsset(asset)
         setCurrency(asset.defaultCurrency || "USD")
+        setCategory(asset.assetType || "STOCK")
         if (asset.currentPrice !== undefined && asset.currentPrice > 0) {
             setUnitPrice(asset.currentPrice.toString())
             const q = parseFloat(quantity)
@@ -225,6 +239,7 @@ export function InvestmentModal({
             formData.append("unitPrice", unitPrice.trim())
             formData.append("totalAmount", effectiveTotal.toString())
             formData.append("currency", currency)
+            formData.append("category", category)
             formData.append("fees", fees ? fees.trim() : "0")
             formData.append("date", date)
             formData.append("notes", notes.trim())
@@ -324,6 +339,25 @@ export function InvestmentModal({
                                 onSelectAsset={handleSelectAsset}
                                 onOpenAddCustomModal={() => setIsAddAssetOpen(true)}
                             />
+                        </div>
+
+                        {/* Category Selector */}
+                        <div className="space-y-1.5">
+                            <Label htmlFor="inv-category" className="text-xs font-semibold">
+                                Categoría del Activo
+                            </Label>
+                            <select
+                                id="inv-category"
+                                value={category}
+                                onChange={(e) => setCategory(e.target.value)}
+                                className="w-full h-9 text-xs rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 text-zinc-900 dark:text-zinc-50 font-medium focus:ring-1 focus:ring-emerald-500 focus:outline-hidden"
+                            >
+                                {categories.map((c) => (
+                                    <option key={c.name} value={c.name}>
+                                        {c.label}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
 
                         {/* Quantity and Unit Price */}
@@ -516,6 +550,7 @@ export function InvestmentModal({
                 onClose={() => setIsAddAssetOpen(false)}
                 workspaceId={workspaceId}
                 onAssetCreated={handleAssetCreated}
+                categories={categories}
             />
         </>
     )

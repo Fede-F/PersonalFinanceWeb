@@ -1,6 +1,17 @@
-import 'dotenv/config';
+import "dotenv/config";
 import { db } from "./index";
-import { investmentAssets } from "./schema";
+import { investmentAssets, investmentCategories } from "./schema";
+import { eq, and, isNull } from "drizzle-orm";
+
+const systemCategories = [
+    { name: "CRYPTO", label: "Criptomonedas", color: "#f59e0b", isSystem: true },
+    { name: "CEDEAR", label: "CEDEARs / Arg", color: "#8b5cf6", isSystem: true },
+    { name: "STOCK", label: "Acciones USA", color: "#3b82f6", isSystem: true },
+    { name: "ETF", label: "ETFs", color: "#10b981", isSystem: true },
+    { name: "BOND", label: "Bonos / Renta Fija", color: "#06b6d4", isSystem: true },
+    { name: "FCI", label: "Fondos Comunes (FCI)", color: "#6366f1", isSystem: true },
+    { name: "OTHER", label: "Otros", color: "#6b7280", isSystem: true },
+];
 
 const initialAssets = [
     // --- Cryptocurrencies ---
@@ -47,6 +58,26 @@ const initialAssets = [
 ];
 
 async function main() {
+    console.log("🌱 Seeding system investment categories...");
+
+    for (const cat of systemCategories) {
+        const [existing] = await db
+            .select()
+            .from(investmentCategories)
+            .where(and(eq(investmentCategories.name, cat.name), isNull(investmentCategories.workspaceId)))
+            .limit(1);
+
+        if (!existing) {
+            await db.insert(investmentCategories).values({
+                workspaceId: null,
+                name: cat.name,
+                label: cat.label,
+                color: cat.color,
+                isSystem: true,
+            });
+        }
+    }
+
     console.log("🌱 Seeding initial investment assets...");
 
     for (const asset of initialAssets) {
@@ -62,6 +93,30 @@ async function main() {
     }
 
     console.log(`✅ Successfully seeded ${initialAssets.length} initial investment assets!`);
+
+    const ARG_LOCAL_STOCKS = new Set([
+        "GGAL.BA", "YPFD.BA", "PAMP.BA", "ALUA.BA", "TXAR.BA", "BMA.BA", "BBAR.BA",
+        "CEPU.BA", "CRES.BA", "EDN.BA", "SUPV.BA", "VALO.BA", "LOMA.BA", "MIRG.BA",
+        "TGSU2.BA", "TGNO4.BA", "TRAN.BA", "MORI.BA", "COME.BA", "CVH.BA", "BYMA.BA",
+        "AGRO.BA", "AUSO.BA", "BHIP.BA", "BOLT.BA", "BPAT.BA", "CADO.BA", "CAPX.BA",
+        "CARC.BA", "CELU.BA", "CGPA2.BA", "CTIO.BA", "DGCU2.BA", "FERR.BA", "GCLA.BA",
+        "GRIM.BA", "HARG.BA", "HAVA.BA", "INTR.BA", "INVJ.BA", "IRSA.BA", "LEDE.BA",
+        "LONG.BA", "METR.BA", "MOLI.BA", "OEST.BA", "PATA.BA", "POLL.BA", "RIGO.BA",
+        "SAMI.BA", "SEMI.BA", "TECO2.BA"
+    ]);
+
+    const allAssets = await db.select().from(investmentAssets);
+    for (const a of allAssets) {
+        const sym = a.symbol.toUpperCase();
+        if (sym.endsWith(".BA")) {
+            const isLocal = ARG_LOCAL_STOCKS.has(sym);
+            const expectedType = isLocal ? "STOCK" : "CEDEAR";
+            if (a.assetType !== expectedType) {
+                console.log(`🔄 Updating ${sym} from ${a.assetType} to ${expectedType}`);
+                await db.update(investmentAssets).set({ assetType: expectedType }).where(eq(investmentAssets.id, a.id));
+            }
+        }
+    }
 }
 
 main()
