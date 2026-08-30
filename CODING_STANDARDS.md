@@ -12,8 +12,10 @@ Este documento reúne todas las **reglas de diseño, arquitectura, UI/UX, rendim
    * **Mobile (PWA):** Barra fija inferior (`MobileBottomNav`) con acceso a las vistas principales y un **botón central flotante `+`** para la acción primaria. Se deben ocultar (`hidden sm:inline-flex`) los botones superiores duplicados para maximizar el espacio vertical útil.
    * **Desktop:** Header de ancho completo sin sidebar lateral molesta, con selector de Workspaces a la izquierda, pestañas de navegación al centro y controles de usuario/utilidades a la derecha.
 3. **Tooltips Descriptivos al hacer Hover en Desktop:**
-   * Todo botón, ícono o toggle de utilidad en el Header (Tema, Modo Privacidad, Switch de Moneda, Notificaciones) debe tener un tooltip flotante explicativo con estilo Shadcn (`bg-zinc-900 text-zinc-100 rounded-lg shadow-xl text-xs`).
-4. **Feedback Táctil & "Spring Press":**
+   * Todo botón, ícono o toggle de utilidad en el Header (Modo Privacidad, Switch de Moneda, Notificaciones) debe tener un tooltip flotante explicativo con estilo Shadcn (`bg-zinc-900 text-zinc-100 rounded-lg shadow-xl text-xs`).
+4. **Selector de Tema Integrado en el Menú de Usuario:**
+   * La opción de alternar entre Modo Claro y Oscuro se ubica dentro del desplegable del perfil del usuario (`UserNav`), liberando espacio horizontal en el Header tanto en mobile como en desktop.
+5. **Feedback Táctil & "Spring Press":**
    * Todo botón, tarjeta clicable o switch debe incluir: `active:scale-95 duration-100 touch-manipulation cursor-pointer select-none`.
    * En CSS global: `-webkit-tap-highlight-color: transparent` para evitar el recuadro azul genérico en celulares.
 5. **Micro-vibraciones Hápticas Suaves:**

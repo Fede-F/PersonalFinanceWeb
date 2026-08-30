@@ -20,7 +20,6 @@ import { WorkspaceSwitcher } from "@/components/workspace-switcher"
 import { UserNav } from "@/components/user-nav"
 import { PeriodSelector } from "@/components/period-selector"
 import { AnimatedNumber } from "@/components/animated-number"
-import { ThemeToggle } from "@/components/theme-toggle"
 import { ThemeSync } from "@/components/theme-sync"
 import { NotificationBell } from "@/components/notification-bell"
 import { PrivacyToggle } from "@/components/privacy-provider"
@@ -233,9 +232,8 @@ export default async function DashboardPage(props: {
                     <PeriodSelector initialMonth={month} initialYear={year} />
                 </div>
 
-                <div className="ml-auto flex items-center gap-1.5 sm:gap-3">
+                <div className="ml-auto flex items-center gap-1 sm:gap-2.5">
                     <PrivacyToggle />
-                    <ThemeToggle />
                     <NotificationBell />
                     <UserNav
                         user={userData}

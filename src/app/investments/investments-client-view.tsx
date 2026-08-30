@@ -12,7 +12,6 @@ import { PullToRefresh } from "@/components/investments/pull-to-refresh"
 import { Button } from "@/components/ui/button"
 import { WorkspaceSwitcher } from "@/components/workspace-switcher"
 import { UserNav } from "@/components/user-nav"
-import { ThemeToggle } from "@/components/theme-toggle"
 import { ThemeSync } from "@/components/theme-sync"
 import { NotificationBell } from "@/components/notification-bell"
 import { ActiveWorkspaceTracker } from "@/components/active-workspace-tracker"
@@ -117,9 +116,6 @@ export function InvestmentsClientView({
                                 
                                 {/* Privacy Mode Toggle */}
                                 <PrivacyToggle />
-
-                                {/* Theme Toggle */}
-                                <ThemeToggle />
 
                                 {/* Notifications */}
                                 <NotificationBell />
