@@ -277,9 +277,17 @@ export async function getFciCatalog(): Promise<FciItem[]> {
                     if (Array.isArray(list)) {
                         for (const item of list) {
                             if (item.fondo && typeof item.vcp === "number") {
+                                // Calculate the real unit price per 1 cuotaparte:
+                                // CAFCI raw report reports VCP per 1,000 cuotapartes.
+                                // Exact formula: patrimonio / ccp, fallback: vcp / 1000.
+                                const unitPrice =
+                                    typeof item.ccp === "number" && item.ccp > 0 && typeof item.patrimonio === "number" && item.patrimonio > 0
+                                        ? item.patrimonio / item.ccp
+                                        : item.vcp / 1000
+
                                 allItems.push({
                                     fondo: item.fondo,
-                                    vcp: item.vcp,
+                                    vcp: unitPrice,
                                     fecha: item.fecha,
                                     category: cat,
                                 })
