@@ -15,7 +15,7 @@ interface AssetSearchComboboxProps {
     onOpenAddCustomModal?: () => void
 }
 
-const searchMemoryCache = new Map<string, MarketSearchResult[]>()
+const searchMemoryCache = new Map<string, { data: MarketSearchResult[]; timestamp: number }>()
 
 const TYPE_COLORS: Record<string, string> = {
     CRYPTO: "bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/30",
@@ -64,8 +64,9 @@ export function AssetSearchCombobox({
     const loadRecentOrSearch = React.useCallback(
         async (q: string) => {
             const cacheKey = `${workspaceId}_${q.trim().toLowerCase()}`
-            if (searchMemoryCache.has(cacheKey)) {
-                setResults(searchMemoryCache.get(cacheKey)!)
+            const cached = searchMemoryCache.get(cacheKey)
+            if (cached && Date.now() - cached.timestamp < 30 * 1000) {
+                setResults(cached.data)
                 return
             }
 
@@ -73,7 +74,7 @@ export function AssetSearchCombobox({
             try {
                 const res = await searchMarketAssets(q, workspaceId)
                 if (res.success && res.results) {
-                    searchMemoryCache.set(cacheKey, res.results)
+                    searchMemoryCache.set(cacheKey, { data: res.results, timestamp: Date.now() })
                     setResults(res.results)
                 }
             } catch (err) {

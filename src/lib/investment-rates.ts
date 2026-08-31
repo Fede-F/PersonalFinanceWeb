@@ -40,9 +40,23 @@ async function fetchCryptoPrices(symbols: string[]): Promise<AssetPriceInfo[]> {
     // 1. Primary Source: Binance (Ultra-fast, real-time, no strict rate limits)
     await Promise.allSettled(
         Array.from(pendingSymbols).map(async (sym) => {
-            const cleanSym = sym.replace("-USD", "").replace("USDT", "")
             try {
-                const url = `https://api.binance.com/api/v3/ticker/24hr?symbol=${cleanSym}USDT`
+                let binancePair = ""
+                let currency = "USD"
+
+                if (sym.endsWith("-BTC")) {
+                    binancePair = sym.replace("-BTC", "") + "BTC"
+                    currency = "BTC"
+                } else if (sym.endsWith("-ETH")) {
+                    binancePair = sym.replace("-ETH", "") + "ETH"
+                    currency = "ETH"
+                } else {
+                    const cleanSym = sym.replace("-USD", "").replace("USDT", "")
+                    binancePair = `${cleanSym}USDT`
+                    currency = "USD"
+                }
+
+                const url = `https://api.binance.com/api/v3/ticker/24hr?symbol=${binancePair}`
                 const res = await fetch(url, { next: { revalidate: 60 } })
                 if (res.ok) {
                     const data = await res.json()
@@ -51,7 +65,7 @@ async function fetchCryptoPrices(symbols: string[]): Promise<AssetPriceInfo[]> {
                         results.push({
                             symbol: sym,
                             price,
-                            currency: "USD",
+                            currency,
                             change24hPct: parseFloat(data.priceChangePercent) || undefined,
                         })
                         pendingSymbols.delete(sym)
@@ -65,9 +79,9 @@ async function fetchCryptoPrices(symbols: string[]): Promise<AssetPriceInfo[]> {
 
     // 2. Secondary Source: CoinGecko for remaining cryptos
     if (pendingSymbols.size > 0) {
-        const cgSymbols = Array.from(pendingSymbols).filter((s) => COINGECKO_MAP[s])
+        const cgSymbols = Array.from(pendingSymbols).filter((s) => COINGECKO_MAP[s] || COINGECKO_MAP[s.replace("-USD", "")])
         if (cgSymbols.length > 0) {
-            const ids = cgSymbols.map((s) => COINGECKO_MAP[s]).join(",")
+            const ids = cgSymbols.map((s) => COINGECKO_MAP[s] || COINGECKO_MAP[s.replace("-USD", "")]).join(",")
             const url = `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`
             try {
                 const res = await fetch(url, {
@@ -86,6 +100,7 @@ async function fetchCryptoPrices(symbols: string[]): Promise<AssetPriceInfo[]> {
                                 change24hPct: val.usd_24h_change,
                             })
                             pendingSymbols.delete(sym)
+                            pendingSymbols.delete(`${sym}-USD`)
                         }
                     }
                 }
@@ -99,7 +114,7 @@ async function fetchCryptoPrices(symbols: string[]): Promise<AssetPriceInfo[]> {
     if (pendingSymbols.size > 0) {
         await Promise.allSettled(
             Array.from(pendingSymbols).map(async (sym) => {
-                const yahooSym = sym.endsWith("-USD") ? sym : `${sym}-USD`
+                const yahooSym = sym.endsWith("-USD") || sym.includes("-") ? sym : `${sym}-USD`
                 try {
                     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSym)}?interval=1d&range=5d`
                     const res = await fetch(url, {
@@ -124,7 +139,7 @@ async function fetchCryptoPrices(symbols: string[]): Promise<AssetPriceInfo[]> {
                                 results.push({
                                     symbol: sym,
                                     price: currentPrice,
-                                    currency: "USD",
+                                    currency: meta.currency?.toUpperCase() || "USD",
                                     change24hPct,
                                     name: meta.shortName || meta.symbol,
                                 })
@@ -561,6 +576,15 @@ export async function getOrUpdateAssetPrices(
                 const todayStr = new Date().toISOString().split("T")[0]
 
                 if (allFetched.length > 0) {
+                    for (const p of allFetched) {
+                        resultMap[p.symbol.toUpperCase()] = {
+                            price: p.price,
+                            currency: p.currency,
+                            change24hPct: p.change24hPct,
+                            name: p.name,
+                        }
+                    }
+
                     const priceInserts = allFetched.map((p) => ({
                         symbol: p.symbol,
                         name: p.name,
@@ -607,25 +631,8 @@ export async function getOrUpdateAssetPrices(
             }
         })()
 
-        // If some symbols had never been fetched, await the promise so we have initial data
-        const hasUncachedSymbols = expiredSymbols.some((s) => !cachedMap.has(s))
-        if (hasUncachedSymbols) {
-            await updatePromise
-            // Refresh results map after update
-            const freshRows = await db
-                .select()
-                .from(assetMarketPrices)
-                .where(inArray(assetMarketPrices.symbol, uniqueSymbols))
-
-            for (const row of freshRows) {
-                resultMap[row.symbol.toUpperCase()] = {
-                    price: parseFloat(row.price),
-                    currency: row.currency,
-                    change24hPct: row.change24hPct ? parseFloat(row.change24hPct) : undefined,
-                    name: row.name || undefined,
-                }
-            }
-        }
+        // Await update so search results and dashboards get fresh prices immediately
+        await updatePromise
     }
 
     return resultMap
