@@ -1122,8 +1122,8 @@ export async function getInvestmentsDashboardData(
 
         for (const a of activeHoldingAssets) {
             const livePriceData = livePrices[a.symbol.toUpperCase()]
-            const isBA = a.symbol.toUpperCase().endsWith(".BA") || a.assetType === "CEDEAR"
-            const priceCurrency = isBA ? "ARS" : (livePriceData?.currency?.toUpperCase() || (a.defaultCurrency?.toUpperCase() || "USD"))
+            const isBA = a.symbol.toUpperCase().endsWith(".BA") || a.assetType === "CEDEAR" || a.assetType === "FCI" || a.defaultCurrency === "ARS"
+            const priceCurrency = (isBA || a.assetType === "FCI") ? "ARS" : (livePriceData?.currency?.toUpperCase() || (a.defaultCurrency?.toUpperCase() || "USD"))
             
             const currentPrice = livePriceData?.price ?? (a.totalBuyQuantity > 0 ? (priceCurrency === "USD" ? a.totalBuyCostInUSD / a.totalBuyQuantity : a.totalBuyCostInBase / a.totalBuyQuantity) : 0)
 
