@@ -29,45 +29,116 @@ interface AssetPriceInfo {
 }
 
 /**
- * Fetches live prices for cryptocurrencies from CoinGecko
+ * Fetches live prices for cryptocurrencies using Binance API with CoinGecko and Yahoo Finance fallback
  */
 async function fetchCryptoPrices(symbols: string[]): Promise<AssetPriceInfo[]> {
-    const cryptoSymbols = symbols.filter((s) => COINGECKO_MAP[s.toUpperCase()])
-    if (cryptoSymbols.length === 0) return []
+    if (symbols.length === 0) return []
 
-    const ids = cryptoSymbols.map((s) => COINGECKO_MAP[s.toUpperCase()]).join(",")
-    const url = `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`
+    const results: AssetPriceInfo[] = []
+    const pendingSymbols = new Set(symbols.map((s) => s.toUpperCase()))
 
-    try {
-        const res = await fetch(url, {
-            headers: { Accept: "application/json" },
-            next: { revalidate: 300 }, // 5 min cache
+    // 1. Primary Source: Binance (Ultra-fast, real-time, no strict rate limits)
+    await Promise.allSettled(
+        Array.from(pendingSymbols).map(async (sym) => {
+            const cleanSym = sym.replace("-USD", "").replace("USDT", "")
+            try {
+                const url = `https://api.binance.com/api/v3/ticker/24hr?symbol=${cleanSym}USDT`
+                const res = await fetch(url, { next: { revalidate: 60 } })
+                if (res.ok) {
+                    const data = await res.json()
+                    const price = parseFloat(data.lastPrice)
+                    if (!isNaN(price) && price > 0) {
+                        results.push({
+                            symbol: sym,
+                            price,
+                            currency: "USD",
+                            change24hPct: parseFloat(data.priceChangePercent) || undefined,
+                        })
+                        pendingSymbols.delete(sym)
+                    }
+                }
+            } catch (err) {
+                // Ignore and fallback
+            }
         })
-        if (!res.ok) {
-            console.warn(`CoinGecko fetch failed with status: ${res.status}`)
-            return []
-        }
+    )
 
-        const data = await res.json()
-        const results: AssetPriceInfo[] = []
-
-        for (const [id, val] of Object.entries(data as Record<string, { usd?: number; usd_24h_change?: number }>)) {
-            const sym = REVERSE_COINGECKO_MAP[id]
-            if (sym && typeof val.usd === "number") {
-                results.push({
-                    symbol: sym,
-                    price: val.usd,
-                    currency: "USD",
-                    change24hPct: val.usd_24h_change,
+    // 2. Secondary Source: CoinGecko for remaining cryptos
+    if (pendingSymbols.size > 0) {
+        const cgSymbols = Array.from(pendingSymbols).filter((s) => COINGECKO_MAP[s])
+        if (cgSymbols.length > 0) {
+            const ids = cgSymbols.map((s) => COINGECKO_MAP[s]).join(",")
+            const url = `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`
+            try {
+                const res = await fetch(url, {
+                    headers: { Accept: "application/json" },
+                    next: { revalidate: 300 },
                 })
+                if (res.ok) {
+                    const data = await res.json()
+                    for (const [id, val] of Object.entries(data as Record<string, { usd?: number; usd_24h_change?: number }>)) {
+                        const sym = REVERSE_COINGECKO_MAP[id]
+                        if (sym && typeof val.usd === "number") {
+                            results.push({
+                                symbol: sym,
+                                price: val.usd,
+                                currency: "USD",
+                                change24hPct: val.usd_24h_change,
+                            })
+                            pendingSymbols.delete(sym)
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Error fetching crypto prices from CoinGecko fallback:", err)
             }
         }
-
-        return results
-    } catch (err) {
-        console.error("Error fetching crypto prices from CoinGecko:", err)
-        return []
     }
+
+    // 3. Tertiary Source: Yahoo Finance (${sym}-USD)
+    if (pendingSymbols.size > 0) {
+        await Promise.allSettled(
+            Array.from(pendingSymbols).map(async (sym) => {
+                const yahooSym = sym.endsWith("-USD") ? sym : `${sym}-USD`
+                try {
+                    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSym)}?interval=1d&range=5d`
+                    const res = await fetch(url, {
+                        headers: {
+                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                            Accept: "application/json",
+                        },
+                        next: { revalidate: 300 },
+                    })
+                    if (res.ok) {
+                        const data = await res.json()
+                        const result = data?.chart?.result?.[0]
+                        if (result) {
+                            const meta = result.meta
+                            const currentPrice = meta.regularMarketPrice ?? meta.previousClose
+                            const previousClose = meta.chartPreviousClose ?? meta.previousClose
+                            let change24hPct: number | undefined
+                            if (currentPrice && previousClose && previousClose > 0) {
+                                change24hPct = ((currentPrice - previousClose) / previousClose) * 100
+                            }
+                            if (typeof currentPrice === "number" && !isNaN(currentPrice)) {
+                                results.push({
+                                    symbol: sym,
+                                    price: currentPrice,
+                                    currency: "USD",
+                                    change24hPct,
+                                    name: meta.shortName || meta.symbol,
+                                })
+                            }
+                        }
+                    }
+                } catch (err) {
+                    // Ignore
+                }
+            })
+        )
+    }
+
+    return results
 }
 
 /**
